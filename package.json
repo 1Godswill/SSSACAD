@@ -1,0 +1,17 @@
+{
+  "name": "ststephens-school-app",
+  "version": "3.12.0",
+  "private": true,
+  "description": "ST. STEPHEN'S SCHOOL Otuoke - report card app packaged as an Android APK",
+  "scripts": {
+    "build:apk": "bash scripts/build-apk.sh"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/local-notifications": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  }
+}

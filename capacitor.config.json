@@ -1,0 +1,9 @@
+{
+  "appId": "com.ststephens.sssacad",
+  "appName": "St Stephens School",
+  "webDir": "www",
+  "server": { "androidScheme": "https" },
+  "plugins": {
+    "LocalNotifications": { "smallIcon": "ic_stat_bell", "iconColor": "#142544" }
+  }
+}
