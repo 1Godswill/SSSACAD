@@ -8,5 +8,6 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(AlertsPlugin.class);
         super.onCreate(savedInstanceState);
+        try { getBridge().getWebView().getSettings().setTextZoom(100); } catch (Exception ignored) { }
     }
 }
