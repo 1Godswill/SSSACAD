@@ -189,7 +189,19 @@ function removeSubjectFromClass(classId, subjectName) {
 
   cs[classId] = list.filter((s) => s !== subjectName);
   saveClassSubjects(cs);
-  if (scoresTouched) saveScores(scores);
+  // Aggressively clear any remaining score entries for this subject (covers races
+  // where another device re-introduced scores between the snapshot and the save).
+  const scores2 = loadScores();
+  let cleared = false;
+  if (scores2[classId]) {
+    Object.keys(scores2[classId]).forEach((term) => {
+      if (scores2[classId][term] && subjectName in scores2[classId][term]) {
+        delete scores2[classId][term][subjectName];
+        cleared = true;
+      }
+    });
+  }
+  if (scoresTouched || cleared) saveScores(scores2);
   if (notTakingIds.length) saveStudents(students);
   const tomb = loadSubjectTomb();
   tomb[subjectTombKey(classId, subjectName)] = true;

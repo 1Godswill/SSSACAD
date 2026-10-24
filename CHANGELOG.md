@@ -1,9 +1,19 @@
 # Changelog
 
+## 3.12.12 — Navigation reliability + safer subject delete + promote warning
+
+- Card and Admin Back navigation now uses an internal stack so the Back bar and phone Back button always return exactly one level, even on WebViews/Capacitor where history.pushState can fail or be cleared.
+- Subject deletion more aggressively clears residual scores before writing the tombstone, reducing the chance that a concurrent sync reintroduces a deleted subject.
+- Promote now shows an extra warning when the device appears offline or has a recent sync error, reminding staff to sync every device first.
+
+## 3.12.10 — Cards open their own section
+
+- After you enter a class, the six cards (Students, Register, Score Entry, Class Report, Report Card, Broadsheet) are a home screen. Tapping a card opens ONLY that section, with a Back bar at the top. Back (or the phone's Back button) returns to the cards.
+- Entering a class, or choosing a class from Admin, always lands on that class's cards.
+
 ## 3.12.9 — Tab cards with animated 3D icons
 
-- The six class tabs (Students, Register, Score Entry, Class Report, Report Card, Broadsheet) are now cards, three per row, each with a glossy animated 3D-style icon. The open tab's card is outlined in blue.
-- The cards sit at the top of the page and scroll with it; the header and class bar stay frozen.
+- The six class tabs are now cards, three per row, each with a glossy animated 3D-style icon.
 - Also includes everything built since 3.12.3 (new Admin lock screen with keyboard, new default Admin PIN, stricter subject-name and score-entry checks, and other fixes).
 
 ## 3.12.3 — Lighter use of the free Cloudflare allowance

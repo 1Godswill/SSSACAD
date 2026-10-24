@@ -261,6 +261,7 @@ function layoutFixedStack() {
   classBar.style.top = headerH + "px";
   const classBarH = classBar.offsetHeight;
   main.style.paddingTop = (headerH + classBarH + 12) + "px";
+  document.documentElement.style.setProperty("--stackH", (headerH + classBarH) + "px");
 }
 window.addEventListener("load", layoutFixedStack);
 window.addEventListener("resize", () => { clearTimeout(layoutFixedStack._t); layoutFixedStack._t = setTimeout(layoutFixedStack, 80); });
@@ -278,19 +279,92 @@ if (window.ResizeObserver) {
 /* ---------------- Tab switching ----------------
    activateTab() is also called directly by login.js (picking a class,
    or the Admin shortcut on the login gate) — not just by tapping a tab. */
-function activateTab(tabId) {
+/* Home screen = the card grid only. Tapping a card opens just that section (with a Back bar).
+   Entering a class (or leaving Admin for a class) lands on the home screen of that class.
+   Internal nav stack keeps Back reliable even when history.pushState fails (some WebViews /
+   Capacitor environments clear or ignore the history state). */
+let tabsHome = true;
+let _navStack = [];   // ["tabCard:scoreentry", "admSec:classes", ...]
+function setTabsHome(v) {
+  tabsHome = !!v;
+  document.body.classList.toggle("tabs-home", tabsHome);
+}
+/* Fills and shows the Back bar. The copy of the icon gets its own gradient ids: the cards are hidden while
+   a section is open, and gradients inside a hidden element do not draw. */
+function showBackBar(svgMarkup, titleText) {
+  const bar = document.getElementById("tabBack");
+  if (!bar) return;
+  const icBox = bar.querySelector(".tb-ic");
+  const title = bar.querySelector(".tb-title");
+  let html = svgMarkup || "";
+  (html.match(/id="[^"]+"/g) || []).forEach((m) => {
+    const id = m.slice(4, -1);
+    html = html.split(id).join(id + "B");
+  });
+  if (icBox) icBox.innerHTML = html;
+  if (title) title.textContent = titleText || "";
+  bar.hidden = false;
+}
+function updateTabBackBar(tabId) {
+  const bar = document.getElementById("tabBack");
+  if (!bar) return;
+  if (tabsHome || tabId === "admintab") { bar.hidden = true; return; }
+  const btn = document.querySelector('#tabs button[data-tab="' + tabId + '"]');
+  if (!btn) { bar.hidden = true; return; }
+  const svg = btn.querySelector("svg");
+  showBackBar(svg ? svg.outerHTML : "", (btn.querySelector("span") || btn).textContent);
+}
+function activateTab(tabId, fromCard) {
+  if (tabId === "admintab" && typeof adminResetSection === "function") adminResetSection();   // Admin always opens on its cards
+  setTabsHome(!fromCard && tabId !== "admintab");
+  if (!fromCard) _navStack = [];   // landing on home or Admin clears the stack
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === tabId));
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.id === tabId));
   const targetTab = document.getElementById(tabId);
   if (targetTab) applyBodyTheme(targetTab.dataset.theme);
+  updateTabBackBar(tabId);
   renderAll();
   layoutFixedStack();
+  window.scrollTo(0, 0);
 }
+function goTabsHome() {
+  setTabsHome(true);
+  _navStack = [];
+  updateTabBackBar(null);
+  renderAll();
+  layoutFixedStack();
+  window.scrollTo(0, 0);
+}
+function openTabCard(tabId) {
+  activateTab(tabId, true);
+  _navStack.push("tabCard:" + tabId);
+  try { history.pushState({ tabCard: tabId }, ""); } catch (e) { /* ignore — stack still works */ }
+}
+function closeTabCard() {
+  if (typeof adminSectionBack === "function" && adminSectionBack()) return;   // inside an Admin section: back to the Admin cards
+  if (tabsHome) return;
+  // Prefer the internal stack (always accurate). Fall back to history only if stack is empty.
+  if (_navStack.length) {
+    _navStack.pop();
+    goTabsHome();
+    return;
+  }
+  if (history.state && history.state.tabCard) { history.back(); } else { goTabsHome(); }
+}
+window.addEventListener("popstate", () => {
+  if (typeof adminSectionPop === "function" && adminSectionPop()) return;
+  const active = document.querySelector(".tab.active");
+  if (!tabsHome && !(active && active.id === "admintab")) {
+    if (_navStack.length) _navStack.pop();
+    goTabsHome();   // phone Back button = Back bar
+  }
+});
 document.getElementById("tabs").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-tab]");
   if (!btn) return;
-  activateTab(btn.dataset.tab);
+  openTabCard(btn.dataset.tab);
 });
+document.getElementById("tabBackBtn").addEventListener("click", closeTabCard);
 
 function applyBodyTheme(themeClass) {
   if (!themeClass) return;
@@ -383,7 +457,8 @@ function renderAll() {
   renderClassBar();
   const active = document.querySelector(".tab.active");
   const draw = active && TAB_RENDERERS[active.id];
-  if (draw) draw(); else Object.keys(TAB_RENDERERS).forEach((k) => TAB_RENDERERS[k]());
+  if (tabsHome && active && active.id !== "admintab") { /* home screen: only the cards show, nothing to draw */ }
+  else if (draw) draw(); else Object.keys(TAB_RENDERERS).forEach((k) => TAB_RENDERERS[k]());
   restoreFocusedFieldState(focusState);
   restoreScrollState(scrollState);
 }

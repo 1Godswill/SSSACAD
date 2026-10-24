@@ -132,9 +132,18 @@ function openPromotionModal() {
     if (plan.missing.length) { toast("Choose a destination for every class"); return; }
     if (!session) { toast("Enter the new session, e.g. 2026/2027"); return; }
     const c = plan.counts;
+    let syncNote = "";
+    try {
+      // Gentle reminder: promote is destructive and should run on one device after everyone has synced.
+      const pill = document.querySelector(".sync-status-pill");
+      const statusText = (pill && pill.textContent) || "";
+      if (/error|couldn.t reach|offline|not set up/i.test(statusText)) {
+        syncNote = "\n\n⚠ This device may not be fully synced. Run Promote only after every device has synced, otherwise old scores can reappear.";
+      }
+    } catch (e) { /* ignore */ }
     const msg = `${c.promote} promoted, ${c.repeat} repeating, ${c.graduate} graduating, ${c.leave} left.\n\n` +
       `This CLEARS all scores, registers and teacher remarks for every class (the old session's report cards can no longer be opened). ` +
-      `Have you exported the report cards? A backup file downloads first.\n\nContinue?`;
+      `Have you exported the report cards? A backup file downloads first.` + syncNote + `\n\nContinue?`;
     if (!confirm(msg)) return;
     if ((prompt("Type PROMOTE to confirm") || "").trim().toUpperCase() !== "PROMOTE") { toast("Cancelled"); return; }
     overlay.remove();

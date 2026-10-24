@@ -51,22 +51,40 @@
   nav button.active{opacity:1;background:var(--brand);}
   main{padding:150px 12px 60px;max-width:900px;margin:0 auto;}
   /* ---- Tab cards: 3 per row, each with a glossy 3D-style animated icon ---- */
-  nav#tabs{position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;overflow:visible;background:none;padding:0;margin:0 0 14px;}
-  nav#tabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:96px;padding:12px 4px 10px;
-    background:var(--card);border:1px solid var(--border);border-radius:18px;color:var(--text);opacity:1;font-size:12px;font-weight:700;line-height:1.2;
+  nav#tabs,
+  .adm-home{position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;overflow:visible;background:none;padding:0;margin:0 0 14px;}
+  nav#tabs button,
+  .adm-home button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:112px;padding:14px 4px 12px;
+    background:var(--card);border:1px solid var(--border);border-radius:18px;color:var(--text);opacity:1;font-size:12.5px;font-weight:700;line-height:1.2;
     white-space:normal;text-align:center;box-shadow:0 2px 8px rgba(16,35,64,.08);transition:transform .15s,box-shadow .2s,background .2s;-webkit-tap-highlight-color:transparent;}
-  nav#tabs button:active{transform:scale(.95);}
-  nav#tabs button.active{background:var(--brand-light);border-color:var(--brand);color:var(--navy);box-shadow:0 0 0 2px var(--brand),0 8px 18px rgba(47,111,235,.25);}
-  nav#tabs .ic{width:48px;height:48px;overflow:visible;flex:0 0 auto;filter:drop-shadow(0 4px 4px rgba(20,37,68,.22));}
-  nav#tabs .ic-body{animation:icFloat 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%;}
-  nav#tabs .ic-shadow{animation:icShadow 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center;}
-  nav#tabs button:nth-child(2) .ic-body,nav#tabs button:nth-child(2) .ic-shadow{animation-delay:-.5s;}
-  nav#tabs button:nth-child(3) .ic-body,nav#tabs button:nth-child(3) .ic-shadow{animation-delay:-1s;}
-  nav#tabs button:nth-child(4) .ic-body,nav#tabs button:nth-child(4) .ic-shadow{animation-delay:-1.5s;}
-  nav#tabs button:nth-child(5) .ic-body,nav#tabs button:nth-child(5) .ic-shadow{animation-delay:-2s;}
-  nav#tabs button:nth-child(6) .ic-body,nav#tabs button:nth-child(6) .ic-shadow{animation-delay:-2.5s;}
-  nav#tabs button.active .ic{transform:scale(1.1);transition:transform .2s;}
-  nav#tabs button.active .ic-body{animation-duration:1.8s;}
+  nav#tabs button:active,
+  .adm-home button:active{transform:scale(.95);}
+  nav#tabs .ic,
+  .adm-home .ic{width:56px;height:56px;overflow:visible;flex:0 0 auto;filter:drop-shadow(0 4px 4px rgba(20,37,68,.22));}
+  nav#tabs .ic-body,
+  .adm-home .ic-body{animation:icFloat 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%;}
+  nav#tabs .ic-shadow,
+  .adm-home .ic-shadow{animation:icShadow 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center;}
+  nav#tabs button:nth-child(2) .ic-body,
+  .adm-home button:nth-child(2) .ic-body,
+  nav#tabs button:nth-child(2) .ic-shadow,
+  .adm-home button:nth-child(2) .ic-shadow{animation-delay:-.5s;}
+  nav#tabs button:nth-child(3) .ic-body,
+  .adm-home button:nth-child(3) .ic-body,
+  nav#tabs button:nth-child(3) .ic-shadow,
+  .adm-home button:nth-child(3) .ic-shadow{animation-delay:-1s;}
+  nav#tabs button:nth-child(4) .ic-body,
+  .adm-home button:nth-child(4) .ic-body,
+  nav#tabs button:nth-child(4) .ic-shadow,
+  .adm-home button:nth-child(4) .ic-shadow{animation-delay:-1.5s;}
+  nav#tabs button:nth-child(5) .ic-body,
+  .adm-home button:nth-child(5) .ic-body,
+  nav#tabs button:nth-child(5) .ic-shadow,
+  .adm-home button:nth-child(5) .ic-shadow{animation-delay:-2s;}
+  nav#tabs button:nth-child(6) .ic-body,
+  .adm-home button:nth-child(6) .ic-body,
+  nav#tabs button:nth-child(6) .ic-shadow,
+  .adm-home button:nth-child(6) .ic-shadow{animation-delay:-2.5s;}
   @keyframes icFloat{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-3px) scale(1.04);}}
   @keyframes icShadow{0%,100%{transform:scaleX(1);opacity:.14;}50%{transform:scaleX(.8);opacity:.08;}}
   /* per-icon details */
@@ -87,6 +105,44 @@
   @keyframes icCell{0%,100%{opacity:.55;}50%{opacity:1;}}
   .ic .head{transform-box:fill-box;transform-origin:50% 100%;animation:icNod 3.2s ease-in-out infinite;}
   @keyframes icNod{0%,100%{transform:translateY(0);}50%{transform:translateY(-1.5px);}}
+  /* ---- Home screen vs opened card ----
+     On the home screen only the cards show. Tapping a card opens ONLY that section, with a Back bar on top. */
+  body.tabs-home .tab{display:none !important;}
+  body:not(.tabs-home) nav#tabs{display:none;}
+  #tabBack{position:sticky;top:var(--stackH,120px);z-index:20;margin:0 -12px 12px;padding:8px 12px;background:var(--bg);}
+  #tabBack[hidden]{display:none;}
+  #tabBack button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 14px 8px 10px;border:1px solid var(--border);border-radius:14px;background:var(--card);color:var(--navy);font-size:15px;font-weight:800;text-align:left;box-shadow:0 2px 8px rgba(16,35,64,.1);-webkit-tap-highlight-color:transparent;}
+  #tabBack button:active{transform:scale(.98);}
+  #tabBack .tb-arrow{font-size:20px;line-height:1;color:var(--brand);}
+  #tabBack .tb-ic{display:flex;width:30px;height:30px;flex:0 0 auto;}
+  #tabBack .tb-ic svg{width:30px;height:30px;overflow:visible;}
+  #tabBack .tb-title{flex:1;min-width:0;}
+  #tabBack .tb-hint{font-size:11px;font-weight:700;color:var(--muted);}
+  .adm-sec[hidden],#admHome[hidden]{display:none;}
+  .ic .swing{transform-box:fill-box;transform-origin:50% 0;animation:icSwing 2.2s ease-in-out infinite;}
+  @keyframes icSwing{0%,100%{transform:rotate(-12deg);}50%{transform:rotate(12deg);}}
+  .ic .spin{transform-box:fill-box;transform-origin:center;animation:icSpin 4s linear infinite;}
+  @keyframes icSpin{to{transform:rotate(360deg);}}
+  .ic .look{animation:icLook 2.6s ease-in-out infinite;}
+  @keyframes icLook{0%,100%{transform:translate(-2px,-2px);}50%{transform:translate(3px,3px);}}
+  .ic .wave{animation:icWave 1.6s ease-in-out infinite;}
+  .ic .wave.w2{animation-delay:.3s;}
+  @keyframes icWave{0%,100%{opacity:.25;}50%{opacity:1;}}
+  .ic .paper{animation:icPaper 2.4s ease-in-out infinite;}
+  @keyframes icPaper{0%,100%{transform:translateY(-3px);}50%{transform:translateY(3px);}}
+  .ic .lvl{animation:icLvl 2.4s ease-in-out infinite;}
+  .ic .lvl.l3{animation-delay:.3s;} .ic .lvl.l2{animation-delay:.6s;} .ic .lvl.l1{animation-delay:.9s;}
+  @keyframes icLvl{0%,100%{opacity:.35;}50%{opacity:1;}}
+  .ic .bounce{animation:icBounce 1.6s ease-in-out infinite;}
+  @keyframes icBounce{0%,100%{transform:translateY(-2px);}50%{transform:translateY(3px);}}
+  .ic .rise{animation:icRise 1.8s ease-in-out infinite;}
+  @keyframes icRise{0%,100%{transform:translateY(2px);}50%{transform:translateY(-3px);}}
+  .ic .lid{transform-box:fill-box;transform-origin:0% 100%;animation:icLid 2.4s ease-in-out infinite;}
+  @keyframes icLid{0%,60%,100%{transform:rotate(0);}75%{transform:rotate(-16deg);}}
+  .ic .tassel{transform-box:fill-box;transform-origin:50% 0;animation:icSwing 2.4s ease-in-out infinite;}
+  .ic .tool{transform-box:fill-box;transform-origin:center;animation:icTool 2s ease-in-out infinite;}
+  .ic .tool.t2{animation-delay:-1s;}
+  @keyframes icTool{0%,100%{transform:rotate(-6deg);}50%{transform:rotate(6deg);}}
   @media (prefers-reduced-motion:reduce){ nav#tabs *,.ic *{animation:none !important;} .ic .tick,.ic .scribble{stroke-dashoffset:0 !important;} }
 
   .tab{display:none;}
@@ -349,7 +405,7 @@
     #printRoot .bs-table{font-size:8px;}
   }
   @media print{
-    header, nav, #classBar, #loginGate, .no-print{display:none !important;}
+    header, nav, #tabBack, #classBar, #loginGate, .no-print{display:none !important;}
     main{padding:0 !important;max-width:none;}
     .tab{display:none !important;}
     .tab.active{display:block !important;}
@@ -357,7 +413,7 @@
   }
 </style>
 </head>
-<body class="theme-students">
+<body class="theme-students tabs-home">
 
 <div id="loginGate" class="no-print"></div>
 <div id="printStamp"></div>
@@ -388,6 +444,7 @@
   <button data-tab="reportcard"><svg class="ic ic-reportcard" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gpA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dde5f5"/></linearGradient><linearGradient id="gpB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6767"/><stop offset="1" stop-color="#d4192f"/></linearGradient><linearGradient id="gpC" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe680"/><stop offset="1" stop-color="#f0a800"/></linearGradient></defs><ellipse class="ic-shadow" cx="32" cy="60" rx="16" ry="3" fill="#142544" opacity=".14"/><g class="ic-body"><rect x="7" y="5" width="40" height="52" rx="6" fill="url(#gpA)"/><rect x="7" y="5" width="40" height="12" rx="6" fill="#2f6feb"/><rect x="7" y="12" width="40" height="5" fill="#2f6feb"/><rect x="13" y="23" width="22" height="3.5" rx="1.7" fill="#b9c4da"/><rect x="13" y="31" width="28" height="3.5" rx="1.7" fill="#b9c4da"/><rect x="13" y="39" width="18" height="3.5" rx="1.7" fill="#b9c4da"/><g class="badge"><path d="M41 44l-5 14 7-3 5 5 2-15z" fill="#b3122a"/><circle cx="46" cy="40" r="13" fill="url(#gpB)"/><circle cx="46" cy="40" r="9.5" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="1.5"/><path d="M46 33.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7-4.2-2.2-4.2 2.2.8-4.7-3.4-3.3 4.7-.7z" fill="url(#gpC)"/></g></g></svg><span>Report Card</span></button>
   <button data-tab="broadsheet"><svg class="ic ic-broadsheet" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gbA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#43e39c"/><stop offset="1" stop-color="#0c8a52"/></linearGradient></defs><ellipse class="ic-shadow" cx="32" cy="60" rx="16" ry="3" fill="#142544" opacity=".14"/><g class="ic-body"><rect x="5" y="9" width="54" height="46" rx="7" fill="url(#gbA)"/><rect x="9" y="13" width="46" height="9" rx="3" fill="#fff" opacity=".95"/><rect class="cell c1" x="9" y="25" width="14" height="8" rx="2.5" fill="#fff"/><rect class="cell c2" x="25" y="25" width="14" height="8" rx="2.5" fill="#fff"/><rect class="cell c3" x="41" y="25" width="14" height="8" rx="2.5" fill="#fff"/><rect class="cell c4" x="9" y="36" width="14" height="8" rx="2.5" fill="#fff"/><rect class="cell c5" x="25" y="36" width="14" height="8" rx="2.5" fill="#fff"/><rect class="cell c6" x="41" y="36" width="14" height="8" rx="2.5" fill="#fff"/><rect x="9" y="47" width="46" height="4" rx="2" fill="#fff" opacity=".35"/></g></svg><span>Broadsheet</span></button>
 </nav>
+<div id="tabBack" class="no-print" hidden><button type="button" id="tabBackBtn"><span class="tb-arrow">←</span><span class="tb-ic"></span><span class="tb-title"></span><span class="tb-hint">Back</span></button></div>
   <div id="students" class="tab active" data-theme="theme-students"></div>
   <div id="registertab" class="tab" data-theme="theme-registertab"></div>
   <div id="scoreentry" class="tab" data-theme="theme-scoreentry"></div>

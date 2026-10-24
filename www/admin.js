@@ -343,12 +343,12 @@ function renderStudentSearchResults(box, query) {
    The picker is the only door into Admin now that the Admin tab is no longer in the class tabs. */
 function exitAdmin() {
   adminUnlocked = false;
+  adminSection = null;
   openGateAtPicker();
 }
 
 function adminGoToTab(tabId) {
-  const navBtn = document.querySelector(`#tabs button[data-tab="${tabId}"]`);
-  if (navBtn) navBtn.click();
+  activateTab(tabId);   // lands on the class's card home screen
 }
 
 function studentProfileCardHtml(p) {
@@ -378,6 +378,105 @@ function studentProfileCardHtml(p) {
       ${latestComment ? `<p style="font-size:12.5px;margin-top:8px;"><b>Latest comment:</b> ${esc(latestComment)}</p>` : ""}
       ${cls ? `<button class="btn small secondary" data-open-class="${esc(cls.id)}" style="margin-top:8px;">Open ${esc(cls.name)}'s Students tab</button>` : ""}
     </div>`;
+}
+
+
+/* ================= ADMIN SECTION CARDS =================
+   The Admin page is a home screen of cards (animated 3D-style icons, 3 per row). Tapping a card opens ONLY that
+   section, with the Back bar on top. Related small sections share a card (announcements, alerts, clean-up, sync). */
+let adminSection = null;   // null = the card home screen
+const ADMIN_SECTIONS = [
+  { key: "find", title: "Find a Student", re: /find a student/i, svg: "<svg class=\"ic ic-find\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><defs><linearGradient id=\"afd1\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#d6efff\"/><stop offset=\"1\" stop-color=\"#4aa3ff\"/></linearGradient><linearGradient id=\"afd2\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffb35c\"/><stop offset=\"1\" stop-color=\"#e0670a\"/></linearGradient></defs><ellipse class=\"ic-shadow\" cx=\"32\" cy=\"60\" rx=\"16\" ry=\"3\" fill=\"#142544\" opacity=\".14\"/><g class=\"ic-body\"><g class=\"look\"><line x1=\"40\" y1=\"40\" x2=\"56\" y2=\"56\" stroke=\"url(#afd2)\" stroke-width=\"9\" stroke-linecap=\"round\"/><circle cx=\"27\" cy=\"27\" r=\"19\" fill=\"url(#afd1)\" stroke=\"#2f6feb\" stroke-width=\"5\"/><path d=\"M16 24a12 12 0 0 1 10-9\" stroke=\"#fff\" stroke-width=\"3.5\" fill=\"none\" stroke-linecap=\"round\" opacity=\".9\"/></g></g></svg>" },
+  { key: "classes", title: "Classes & Codes", re: /classes.*access/i, svg: "<svg class=\"ic ic-classes\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><defs><linearGradient id=\"ack1\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff07a\"/><stop offset=\"1\" stop-color=\"#e5a800\"/></linearGradient></defs><ellipse class=\"ic-shadow\" cx=\"32\" cy=\"60\" rx=\"16\" ry=\"3\" fill=\"#142544\" opacity=\".14\"/><g class=\"ic-body\"><g class=\"look\"><line x1=\"28\" y1=\"28\" x2=\"54\" y2=\"54\" stroke=\"#f0bd00\" stroke-width=\"8\" stroke-linecap=\"round\"/><line x1=\"43\" y1=\"50\" x2=\"51\" y2=\"42\" stroke=\"#f0bd00\" stroke-width=\"6\" stroke-linecap=\"round\"/><line x1=\"35\" y1=\"42\" x2=\"42\" y2=\"35\" stroke=\"#f0bd00\" stroke-width=\"6\" stroke-linecap=\"round\"/><circle cx=\"21\" cy=\"21\" r=\"15\" fill=\"url(#ack1)\"/><circle cx=\"21\" cy=\"21\" r=\"6\" fill=\"#fff\"/><path d=\"M10 17a12 12 0 0 1 9-8\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\" opacity=\".7\"/></g></g></svg>" },
+  { key: "ann", title: "Announcements", re: /announcement/i, svg: "<svg class=\"ic ic-ann\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><defs><linearGradient id=\"ama1\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ff8a5c\"/><stop offset=\"1\" stop-color=\"#d6213c\"/></linearGradient><linearGradient id=\"ama2\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffe066\"/><stop offset=\"1\" stop-color=\"#ffb703\"/></linearGradient></defs><ellipse class=\"ic-shadow\" cx=\"32\" cy=\"60\" rx=\"16\" ry=\"3\" fill=\"#142544\" opacity=\".14\"/><g class=\"ic-body\"><rect x=\"11\" y=\"38\" width=\"10\" height=\"16\" rx=\"3.5\" fill=\"#b3122a\"/><path d=\"M8 24h14l24-13v38L22 38H8z\" fill=\"url(#ama1)\"/><path d=\"M12 27h8\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\" opacity=\".6\"/><path class=\"wave\" d=\"M51 24q6 8 0 16\" stroke=\"url(#ama2)\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/><path class=\"wave w2\" d=\"M56 17q10 15 0 30\" stroke=\"url(#ama2)\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/></g></svg>" },
+  { key: "alerts", title: "Alerts & Reminders", re: /ring all|reminder/i, svg: "<svg class=\"ic ic-alerts\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><defs><linearGradient id=\"abl1\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffe680\"/><stop offset=\"1\" stop-color=\"#e8a000\"/></linearGradient></defs><ellipse class=\"ic-shadow\" cx=\"32\" cy=\"60\" rx=\"16\" ry=\"3\" fill=\"#142544\" opacity=\".14\"/><g class=\"ic-body\"><g class=\"swing\"><path d=\"M32 8c-9 0-15 7-15 16v10l-5 8v3h40v-3l-5-8V24c0-9-6-16-15-16z\" fill=\"url(#abl1)\"/><circle cx=\"32\" cy=\"8\" r=\"4\" fill=\"#d18a00\"/><path d=\"M26 50a6 6 0 0 0 12 0z\" fill=\"#c77d00\"/><path d=\"M21 23c1-6 5-10 10-11\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\" opacity=\".65\" stroke-linecap=\"round\"/></g></g></svg>" },
+  { key: "bio", title: "Print Bio Data", re: /bio data/i, svg: "<svg class=\"ic ic-bio\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><defs><linearGradient id=\"apr1\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#6b7385\"/><stop offset=\"1\" stop-color=\"#262c38\"/></linearGradient></defs><ellipse class=\"ic-shadow\" cx=\"32\" cy=\"60\" rx=\"16\" ry=\"3\" fill=\"#142544\" opacity=\".14\"/><g class=\"ic-body\"><rect x=\"18\" y=\"5\" width=\"28\" height=\"20\" rx=\"2\" fill=\"#fff\" stroke=\"#d5dbe8\"/><rect x=\"6\" y=\"22\" width=\"52\" height=\"26\" rx=\"7\" fill=\"url(#apr1)\"/><circle cx=\"50\" cy=\"30\" r=\"2.6\" fill=\"#4be0a0\"/><g class=\"paper\"><rect x=\"15\" y=\"37\" width=\"34\" height=\"20\" rx=\"2\" fill=\"#fff\" stroke=\"#d5dbe8\"/><rect x=\"20\" y=\"43\" width=\"24\" height=\"2.6\" rx=\"1.3\" fill=\"#b9c4da\"/><rect x=\"20\" y=\"49\" width=\"16\" height=\"2.6\" rx=\"1.3\" fill=\"#b9c4da\"/></g></g></svg>" },
+  { key: "pin", title: "Admin PIN", re: /admin pin/i, svg: "<svg class=\"ic ic-pin\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><defs><linearGradient id=\"asd1\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#5eeaa6\"/><stop offset=\"1\" stop-color=\"#0b8a50\"/></linearGradient></defs><ellipse class=\"ic-shadow\" cx=\"32\" cy=\"60\" rx=\"16\" ry=\"3\" fill=\"#142544\" opacity=\".14\"/><g class=\"ic-body\"><path d=\"M32 4l22 8v17c0 14-9 24-22 31C19 53 10 43 10 29V12z\" fill=\"url(#asd1)\"/><path d=\"M32 9l18 6.5V29c0 11-7 19.5-18 25z\" fill=\"#fff\" opacity=\".13\"/><path d=\"M25 30v-5a7 7 0 0 1 14 0v5\" stroke=\"#fff\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/><rect x=\"22\" y=\"30\" width=\"20\" height=\"15\" rx=\"3.5\" fill=\"#fff\"/><circle cx=\"32\" cy=\"37\" r=\"2.6\" fill=\"#0b8a50\"/></g></svg>" },
+  { key: "export", title: "Export", re: /^export/i, svg: "<svg class=\"ic ic-export\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><defs><linearGradient id=\"aex1\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#6db8ff\"/><stop offset=\"1\" stop-color=\"#1f5fe0\"/></linearGradient></defs><ellipse class=\"ic-shadow\" cx=\"32\" cy=\"60\" rx=\"16\" ry=\"3\" fill=\"#142544\" opacity=\".14\"/><g class=\"ic-body\"><circle cx=\"32\" cy=\"29\" r=\"22\" fill=\"url(#aex1)\"/><path d=\"M17 18a18 18 0 0 1 14-7\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\" opacity=\".5\"/><g class=\"bounce\"><path d=\"M32 16v19M23 27l9 9 9-9\" stroke=\"#fff\" stroke-width=\"5.5\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></g><path d=\"M12 56h40\" stroke=\"#1f5fe0\" stroke-width=\"5\" stroke-linecap=\"round\"/></g></svg>" },
+  { key: "memory", title: "Phone Memory", re: /memory/i, svg: "<svg class=\"ic ic-memory\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><defs><linearGradient id=\"abt1\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#56607a\"/><stop offset=\"1\" stop-color=\"#262c3c\"/></linearGradient><linearGradient id=\"abt2\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#7bf07b\"/><stop offset=\"1\" stop-color=\"#17a336\"/></linearGradient></defs><ellipse class=\"ic-shadow\" cx=\"32\" cy=\"60\" rx=\"16\" ry=\"3\" fill=\"#142544\" opacity=\".14\"/><g class=\"ic-body\"><rect x=\"25\" y=\"2\" width=\"14\" height=\"7\" rx=\"2.5\" fill=\"#6b7688\"/><rect x=\"15\" y=\"7\" width=\"34\" height=\"53\" rx=\"8\" fill=\"url(#abt1)\"/><rect class=\"lvl l1\" x=\"21\" y=\"13\" width=\"22\" height=\"9\" rx=\"3\" fill=\"url(#abt2)\"/><rect class=\"lvl l2\" x=\"21\" y=\"24\" width=\"22\" height=\"9\" rx=\"3\" fill=\"url(#abt2)\"/><rect class=\"lvl l3\" x=\"21\" y=\"35\" width=\"22\" height=\"9\" rx=\"3\" fill=\"url(#abt2)\"/><rect class=\"lvl l3\" x=\"21\" y=\"46\" width=\"22\" height=\"9\" rx=\"3\" fill=\"url(#abt2)\"/></g></svg>" },
+  { key: "backup", title: "Backup & Restore", re: /backup|restore/i, svg: "<svg class=\"ic ic-backup\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><defs><linearGradient id=\"acl1\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#8fd8ff\"/><stop offset=\"1\" stop-color=\"#2b8bf0\"/></linearGradient></defs><ellipse class=\"ic-shadow\" cx=\"32\" cy=\"60\" rx=\"16\" ry=\"3\" fill=\"#142544\" opacity=\".14\"/><g class=\"ic-body\"><path d=\"M17 50a12 12 0 0 1-1-24 17 17 0 0 1 32-3 14 14 0 0 1 2 27z\" fill=\"url(#acl1)\"/><path d=\"M17 30c2-7 8-11 15-11\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\" opacity=\".55\"/><g class=\"rise\"><path d=\"M32 46V29M24 36l8-8 8 8\" stroke=\"#fff\" stroke-width=\"5\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></g></g></svg>" },
+  { key: "deleted", title: "Deleted & Undo", re: /deleted/i, svg: "<svg class=\"ic ic-deleted\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><defs><linearGradient id=\"atr1\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#ff7676\"/><stop offset=\"1\" stop-color=\"#cf1f35\"/></linearGradient><linearGradient id=\"atr2\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#e3e8f2\"/><stop offset=\"1\" stop-color=\"#8693ab\"/></linearGradient></defs><ellipse class=\"ic-shadow\" cx=\"32\" cy=\"60\" rx=\"16\" ry=\"3\" fill=\"#142544\" opacity=\".14\"/><g class=\"ic-body\"><path d=\"M15 20h34l-3 37a4 4 0 0 1-4 3H22a4 4 0 0 1-4-3z\" fill=\"url(#atr1)\"/><rect x=\"24\" y=\"27\" width=\"3.5\" height=\"26\" rx=\"1.7\" fill=\"#fff\" opacity=\".55\"/><rect x=\"30.2\" y=\"27\" width=\"3.5\" height=\"26\" rx=\"1.7\" fill=\"#fff\" opacity=\".55\"/><rect x=\"36.5\" y=\"27\" width=\"3.5\" height=\"26\" rx=\"1.7\" fill=\"#fff\" opacity=\".55\"/><g class=\"lid\"><rect x=\"10\" y=\"13\" width=\"44\" height=\"7\" rx=\"3.5\" fill=\"url(#atr2)\"/><rect x=\"25\" y=\"8\" width=\"14\" height=\"6\" rx=\"3\" fill=\"#8693ab\"/></g></g></svg>" },
+  { key: "promote", title: "Promote Pupils", re: /promote/i, svg: "<svg class=\"ic ic-promote\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><defs><linearGradient id=\"agr1\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#5a78c8\"/><stop offset=\"1\" stop-color=\"#1b2d66\"/></linearGradient></defs><ellipse class=\"ic-shadow\" cx=\"32\" cy=\"60\" rx=\"16\" ry=\"3\" fill=\"#142544\" opacity=\".14\"/><g class=\"ic-body\"><path d=\"M16 33v12c0 5 7 9 16 9s16-4 16-9V33l-16 8z\" fill=\"#1d3a73\"/><path d=\"M32 9L4 23l28 14 28-14z\" fill=\"url(#agr1)\"/><path d=\"M14 23l18-9\" stroke=\"#fff\" stroke-width=\"2.5\" stroke-linecap=\"round\" opacity=\".5\"/><g class=\"tassel\"><path d=\"M56 25v19\" stroke=\"#ffc400\" stroke-width=\"3\" stroke-linecap=\"round\"/><circle cx=\"56\" cy=\"47\" r=\"4\" fill=\"#ffc400\"/></g></g></svg>" },
+  { key: "cleanup", title: "Clean-up", re: /standardi|hidden data/i, svg: "<svg class=\"ic ic-cleanup\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><defs><linearGradient id=\"atl1\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#f1f4fa\"/><stop offset=\"1\" stop-color=\"#8c98b0\"/></linearGradient><linearGradient id=\"atl2\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#ff6b6b\"/><stop offset=\"1\" stop-color=\"#c4182f\"/></linearGradient></defs><ellipse class=\"ic-shadow\" cx=\"32\" cy=\"60\" rx=\"16\" ry=\"3\" fill=\"#142544\" opacity=\".14\"/><g class=\"ic-body\"><g class=\"tool\"><g transform=\"rotate(45 32 32)\"><rect x=\"26.5\" y=\"4\" width=\"11\" height=\"20\" rx=\"4\" fill=\"url(#atl2)\"/><rect x=\"30\" y=\"24\" width=\"4\" height=\"28\" fill=\"url(#atl1)\"/><path d=\"M30 52h4l-2 6z\" fill=\"#8c98b0\"/></g></g><g class=\"tool t2\"><g transform=\"rotate(-45 32 32)\"><rect x=\"29\" y=\"18\" width=\"6\" height=\"40\" rx=\"3\" fill=\"url(#atl1)\"/><circle cx=\"32\" cy=\"14\" r=\"10\" fill=\"url(#atl1)\"/><rect x=\"28\" y=\"2\" width=\"8\" height=\"11\" fill=\"#fff\"/></g></g></g></svg>" },
+  { key: "sync", title: "Sync & Devices", re: /connected devices|sync/i, svg: "<svg class=\"ic ic-sync\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><defs><linearGradient id=\"asy1\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#4be0a0\"/><stop offset=\"1\" stop-color=\"#1f5fe0\"/></linearGradient></defs><ellipse class=\"ic-shadow\" cx=\"32\" cy=\"60\" rx=\"16\" ry=\"3\" fill=\"#142544\" opacity=\".14\"/><g class=\"ic-body\"><g class=\"spin\"><path d=\"M51 30a19 19 0 1 1-8-15\" stroke=\"url(#asy1)\" stroke-width=\"7\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M36 6l14 10-14 8z\" fill=\"#1f5fe0\"/></g></g></svg>" },
+  { key: "about", title: "App Version", re: /app version/i, svg: "<svg class=\"ic ic-about\" viewBox=\"0 0 64 64\" aria-hidden=\"true\"><defs><linearGradient id=\"aab1\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#6db8ff\"/><stop offset=\"1\" stop-color=\"#1b4fd0\"/></linearGradient></defs><ellipse class=\"ic-shadow\" cx=\"32\" cy=\"60\" rx=\"16\" ry=\"3\" fill=\"#142544\" opacity=\".14\"/><g class=\"ic-body\"><circle cx=\"32\" cy=\"31\" r=\"25\" fill=\"url(#aab1)\"/><path d=\"M14 24a20 20 0 0 1 16-13\" stroke=\"#fff\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\" opacity=\".5\"/><circle cx=\"32\" cy=\"19\" r=\"4.2\" fill=\"#fff\"/><rect x=\"28\" y=\"27\" width=\"8\" height=\"21\" rx=\"4\" fill=\"#fff\"/></g></svg>" }
+];
+function adminResetSection() { adminSection = null; }
+function adminApplySection() {
+  const el = document.getElementById("admintab");
+  if (!el) return;
+  const home = el.querySelector("#admHome");
+  if (!home) return;
+  if (adminSection && !el.querySelector('.adm-sec[data-sec="' + adminSection + '"]')) adminSection = null;
+  home.hidden = !!adminSection;
+  el.querySelectorAll(".adm-sec").forEach((d) => { d.hidden = d.dataset.sec !== adminSection; });
+  const bar = document.getElementById("tabBack");
+  if (adminSection) {
+    const def = ADMIN_SECTIONS.find((x) => x.key === adminSection);
+    if (def) showBackBar(def.svg, def.title);
+  } else if (bar) {
+    bar.hidden = true;
+  }
+}
+function adminOpenSection(key) {
+  adminSection = key;
+  adminApplySection();
+  if (typeof _navStack !== "undefined") _navStack.push("admSec:" + key);
+  try { history.pushState({ admSec: key }, ""); } catch (e) { /* ignore — stack still works */ }
+  window.scrollTo(0, 0);
+}
+// Back bar tapped while a section is open. Returns true if it handled the tap.
+function adminSectionBack() {
+  if (!adminSection) return false;
+  // Prefer internal stack (reliable). history.back() only if stack already emptied.
+  if (typeof _navStack !== "undefined" && _navStack.length && _navStack[_navStack.length - 1].indexOf("admSec:") === 0) {
+    _navStack.pop();
+  }
+  adminSection = null; adminApplySection(); window.scrollTo(0, 0);
+  return true;
+}
+// Phone Back button. Returns true if it closed a section.
+function adminSectionPop() {
+  if (!adminSection) return false;
+  if (typeof _navStack !== "undefined" && _navStack.length && _navStack[_navStack.length - 1].indexOf("admSec:") === 0) {
+    _navStack.pop();
+  }
+  adminSection = null; adminApplySection(); window.scrollTo(0, 0);
+  return true;
+}
+function adminBuildSections(el) {
+  const kids = Array.from(el.children);
+  const groups = {};
+  let last = ADMIN_SECTIONS[0];
+  kids.forEach((k) => {
+    const h = k.querySelector("h2");
+    const text = h ? h.textContent.trim() : "";
+    const def = (text && ADMIN_SECTIONS.find((x) => x.re.test(text))) || last;
+    last = def;
+    (groups[def.key] = groups[def.key] || []).push(k);
+  });
+  const home = document.createElement("div");
+  home.id = "admHome";
+  home.className = "adm-home";
+  const secs = [];
+  ADMIN_SECTIONS.forEach((def) => {
+    if (!groups[def.key]) return;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.dataset.sec = def.key;
+    b.innerHTML = def.svg + "<span>" + def.title + "</span>";
+    b.addEventListener("click", () => adminOpenSection(def.key));
+    home.appendChild(b);
+    const wrap = document.createElement("div");
+    wrap.className = "adm-sec";
+    wrap.dataset.sec = def.key;
+    wrap.hidden = true;
+    groups[def.key].forEach((k) => wrap.appendChild(k));
+    secs.push(wrap);
+  });
+  el.appendChild(home);
+  secs.forEach((w) => el.appendChild(w));
+  adminApplySection();
 }
 
 function renderAdminTab() {
@@ -593,4 +692,5 @@ function renderAdminTab() {
       renderAll();
     });
   }
+  adminBuildSections(el);
 }
