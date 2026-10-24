@@ -19,7 +19,7 @@
                        from wiping out a code the person is mid-typing. */
 let hasEnteredApp = false;
 let gateForcedOpen = false;
-let gateStep = "picking";       // "picking" | "code"
+let gateStep = "picking";       // "picking" | "code" | "admin"
 let gatePendingClassId = null;
 let gateRenderedKey = null;
 
@@ -63,6 +63,7 @@ function renderLoginGate() {
   if (!shouldShowGate()) {
     if (el.style.display !== "none") {
       el.style.display = "none"; gateRenderedKey = null;
+      stopGateAdminKeys();
       removeGateMarquee();
     }
     return;
@@ -72,7 +73,10 @@ function renderLoginGate() {
 
   const classes = sortedClasses();
   let key;
-  if (gateStep === "code" && gatePendingClassId && classes.some((c) => c.id === gatePendingClassId) && classNeedsCode(gatePendingClassId)) {
+  if (gateStep !== "admin") stopGateAdminKeys();
+  if (gateStep === "admin") {
+    key = "admin";
+  } else if (gateStep === "code" && gatePendingClassId && classes.some((c) => c.id === gatePendingClassId) && classNeedsCode(gatePendingClassId)) {
     key = "code:" + gatePendingClassId;
   } else {
     gateStep = "picking";
@@ -84,6 +88,7 @@ function renderLoginGate() {
 
   updateGateMarquee();
   if (gateStep === "code") renderGateCodeStep(el, gatePendingClassId);
+  else if (gateStep === "admin") renderGateAdminStep(el);
   else renderGatePickerStep(el, classes);
 }
 
@@ -168,11 +173,10 @@ function renderGatePickerStep(el, classes) {
   el.innerHTML = `
     <div class="gate-card gate-card-wide">
       <img src="icons/logo.png" alt="" class="gate-logo">
-      <h1 class="gate-title no-caps">ST. STEPHEN'S SCHOOL Otuoke</h1>
+      <h1 class="gate-title no-caps">ST. STEPHEN'S SCHOOL OTUOKE</h1>
       <div class="gate-pick-head">
         <div class="gate-pick-cap">${GI('<path d="M24 8L4 18l20 10 20-10L24 8z"/><path d="M12 24v10c0 3 6 6 12 6s12-3 12-6V24"/><path d="M44 18v12"/>')}</div>
-        <div class="gate-pick-title">SELECT YOUR CLASS</div>
-        <div class="gate-pick-sub">Choose your class to continue</div>
+        <div class="gate-pick-title">Choose your class to continue</div>
       </div>
       ${classes.length ? `
         <div class="gate-class-list">
@@ -213,13 +217,112 @@ function renderGatePickerStep(el, classes) {
   const adminBtn = document.getElementById("gateAdminBtn");
   if (adminBtn) {
     adminBtn.addEventListener("click", () => {
-      hasEnteredApp = true; // the Admin tab has its own PIN gate; this just dismisses the class picker
-      gateForcedOpen = false;
+      // Full-screen admin lock: only the keyboard, and an exit button back to this picker.
+      gateStep = "admin";
+      gatePendingClassId = null;
+      gateForcedOpen = true;
       gateRenderedKey = null;
-      el.style.display = "none";
-      activateTab("admintab");
+      renderLoginGate();
     });
   }
+}
+
+/* ---------- Admin lock screen ----------
+   Full screen, nothing but a keyboard. The admin PIN can hold letters and symbols
+   (default "@Admin"), so this is a small on-screen keyboard rather than a number pad.
+   ❎ goes back to the class picker. A wrong PIN just clears and shakes. */
+let gateAdminKeyHandler = null;
+function stopGateAdminKeys() {
+  if (gateAdminKeyHandler) { document.removeEventListener("keydown", gateAdminKeyHandler, true); gateAdminKeyHandler = null; }
+}
+function exitGateAdminLock() {
+  stopGateAdminKeys();
+  gateStep = "picking";
+  gatePendingClassId = null;
+  gateForcedOpen = true;
+  gateRenderedKey = null;
+  renderLoginGate();
+}
+function renderGateAdminStep(el) {
+  stopGateAdminKeys();
+  removeGateMarquee();
+  const ROWS = [
+    "1234567890".split(""),
+    "qwertyuiop".split(""),
+    "asdfghjkl".split(""),
+    ["SHIFT"].concat("zxcvbnm".split("")).concat(["BACK"]),
+    "@#$%&*!._-".split("")
+  ];
+  let pin = "";
+  let shift = false;
+  el.innerHTML = `
+    <div class="gate-card gate-admin-lock">
+      <button type="button" class="gate-admin-exit" id="gateAdminExit" aria-label="Exit to class picker" title="Exit">\u274E</button>
+      <div class="gate-admin-lockico" aria-hidden="true">\uD83D\uDD10</div>
+      <h1 class="gate-title">Admin Access</h1>
+      <div class="gate-admin-dots" id="gateAdminDots" aria-live="polite"></div>
+      <div class="gate-kb" id="gateKb">
+        ${ROWS.map((row) => `<div class="gate-kb-row">${row.map((k) => {
+          if (k === "SHIFT") return `<button type="button" class="gate-key gate-key-fn" data-k="SHIFT" id="gateKeyShift" aria-label="Shift">\u21E7</button>`;
+          if (k === "BACK") return `<button type="button" class="gate-key gate-key-fn" data-k="BACK" aria-label="Backspace">\u232B</button>`;
+          return `<button type="button" class="gate-key" data-k="${k}">${k}</button>`;
+        }).join("")}</div>`).join("")}
+        <div class="gate-kb-row"><button type="button" class="gate-key gate-key-go" data-k="GO">Unlock</button></div>
+      </div>
+    </div>`;
+  const dots = document.getElementById("gateAdminDots");
+  const card = el.querySelector(".gate-admin-lock");
+  function paint() {
+    dots.textContent = pin ? "\u25CF".repeat(Math.min(pin.length, 24)) : "\u00A0";
+    el.querySelectorAll(".gate-key[data-k]").forEach((b) => {
+      const k = b.dataset.k;
+      if (k.length === 1 && /[a-z]/.test(k)) b.textContent = shift ? k.toUpperCase() : k;
+    });
+    const sb = document.getElementById("gateKeyShift");
+    if (sb) sb.classList.toggle("on", shift);
+  }
+  function submit() {
+    if (!pin) return;
+    if (pin === getAdminPin()) {
+      stopGateAdminKeys();
+      adminUnlocked = true;
+      adminGridOpen = true;
+      hasEnteredApp = true;
+      gateForcedOpen = false;
+      gateStep = "picking";
+      gatePendingClassId = null;
+      gateRenderedKey = null;
+      el.style.display = "none";
+      removeGateMarquee();
+      toast("Admin unlocked");
+      activateTab("admintab");
+      renderAll();
+    } else {
+      pin = ""; shift = false; paint();
+      toast("Incorrect PIN");
+      card.classList.remove("gate-shake"); void card.offsetWidth; card.classList.add("gate-shake");
+    }
+  }
+  function press(k) {
+    if (k === "SHIFT") { shift = !shift; }
+    else if (k === "BACK") { pin = pin.slice(0, -1); }
+    else if (k === "GO") { submit(); return; }
+    else if (pin.length < 32) { pin += (shift && /[a-z]/.test(k)) ? k.toUpperCase() : k; shift = false; }
+    paint();
+  }
+  el.querySelectorAll(".gate-key[data-k]").forEach((b) => b.addEventListener("click", () => press(b.dataset.k)));
+  document.getElementById("gateAdminExit").addEventListener("click", exitGateAdminLock);
+  // A real keyboard works too (desktop / tablets with a keyboard attached).
+  gateAdminKeyHandler = (e) => {
+    if (gateStep !== "admin" || el.style.display === "none") return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === "Enter") { e.preventDefault(); submit(); }
+    else if (e.key === "Backspace") { e.preventDefault(); press("BACK"); }
+    else if (e.key === "Escape") { e.preventDefault(); exitGateAdminLock(); }
+    else if (e.key.length === 1) { e.preventDefault(); if (pin.length < 32) { pin += e.key; shift = false; paint(); } }
+  };
+  document.addEventListener("keydown", gateAdminKeyHandler, true);
+  paint();
 }
 
 function renderGateCodeStep(el, classId) {

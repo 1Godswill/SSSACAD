@@ -1,6 +1,6 @@
 {
   "name": "ststephens-school-app",
-  "version": "3.12.0",
+  "version": "3.12.9",
   "private": true,
   "description": "ST. STEPHEN'S SCHOOL Otuoke - report card app packaged as an Android APK",
   "scripts": {

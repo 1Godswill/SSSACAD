@@ -204,7 +204,7 @@ function bioPagesForClass(cls) {
         <div style="display:flex;align-items:center;gap:12px;border-bottom:2px solid #142544;padding-bottom:8px;margin-bottom:10px;">
           <img src="icons/logo.png" alt="" style="width:62px;height:62px;">
           <div style="text-transform:none;">
-            <div style="font-size:19px;font-weight:800;color:#142544;">ST. STEPHEN'S SCHOOL Otuoke</div>
+            <div style="font-size:19px;font-weight:800;color:#142544;">ST. STEPHEN'S SCHOOL OTUOKE</div>
             <div style="font-size:12px;color:#6b7688;">Nursery, Primary and Secondary School</div>
           </div>
         </div>

@@ -1,5 +1,29 @@
 # Changelog
 
+## 3.12.9 — Tab cards with animated 3D icons
+
+- The six class tabs (Students, Register, Score Entry, Class Report, Report Card, Broadsheet) are now cards, three per row, each with a glossy animated 3D-style icon. The open tab's card is outlined in blue.
+- The cards sit at the top of the page and scroll with it; the header and class bar stay frozen.
+- Also includes everything built since 3.12.3 (new Admin lock screen with keyboard, new default Admin PIN, stricter subject-name and score-entry checks, and other fixes).
+
+## 3.12.3 — Lighter use of the free Cloudflare allowance
+
+- The "I'm online" signal is now sent every 10 minutes (was 5). A phone shows as Online for about 12 minutes after its last signal.
+- Android app: while the app is CLOSED it checks the server every 10 minutes (was every 15 seconds). While the app is OPEN nothing changes (about every 15–20 seconds). Closed-app alerts can therefore arrive up to about 10 minutes late. A Ring-All buzz older than 12 minutes is no longer rung.
+- The Friday register reminders are unaffected (Android schedules them itself).
+
+## 3.12.2 — Phone memory guard
+
+- New **Admin > Phone Memory** card: a meter showing how full the phone's storage is (amber from 70%, red from 90%), what is using the room, a "Make a backup now" button and a "Free up space" button.
+- A red banner appears (on every tab) when memory is 90% full, or when a save fails because memory is full. A failed save is now undone cleanly: your data and its change-record can no longer end up out of step.
+- Sync is all-or-nothing on the phone: if memory fills up part-way through, every section is put back as it was.
+- The spare copy a phone keeps after catching up to a new session is removed after a good sync once it is a day old (straight away if memory is 70%+ full).
+- Deletion records older than about 4 months are cleared automatically while syncing (and by "Free up space").
+
+## 3.12.1 — Android text size fix
+
+- The Android app now ignores the phone's system font-size setting, so text matches the web version and no longer folds or gets cut off.
+
 ## 3.12.0 — Android app (APK)
 
 - Packaged as a real Android app (no browser needed). Same screens, same data, same Sync URL.

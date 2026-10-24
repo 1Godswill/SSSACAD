@@ -18,6 +18,41 @@ function toast(msg) {
   toast._t = setTimeout(() => el.classList.remove("show"), 2200);
 }
 
+/* An out-of-range number is refused, not adjusted. The box is left BLANK (and the entry for that box is
+   cleared, so what is on screen and what is saved always agree), flashes red, and a small red
+   "Invalid entry" note appears directly under that box. */
+function rejectEntry(inp) {
+  inp.value = "";
+  inp.classList.add("entry-rejected");
+  setTimeout(() => inp.classList.remove("entry-rejected"), 1200);
+  showEntryError(inp);
+}
+// The note is drawn on top of the page (position:fixed) so a scrolling table can never clip it.
+// If there is no room under the box (e.g. the on-screen keyboard is in the way) it goes just above instead.
+function showEntryError(inp) {
+  if (showEntryError._off) showEntryError._off();
+  const tip = document.createElement("div");
+  tip.className = "no-print";
+  tip.textContent = "Invalid entry 🚫";
+  tip.style.cssText = "position:fixed;z-index:9999;background:#c62828;color:#fff;font-size:13px;font-weight:400;"
+    + "padding:4px 9px;border-radius:7px;box-shadow:0 2px 8px rgba(0,0,0,.3);white-space:nowrap;pointer-events:none;";
+  document.body.appendChild(tip);
+  const r = inp.getBoundingClientRect();
+  const vw = window.innerWidth, vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.max(4, Math.min(r.left, vw - w - 4)) + "px";
+  tip.style.top = ((r.bottom + 3 + h > vh) ? Math.max(4, r.top - h - 3) : r.bottom + 3) + "px";
+  const timer = setTimeout(() => showEntryError._off && showEntryError._off(), 2500);
+  const onScroll = () => showEntryError._off && showEntryError._off();
+  window.addEventListener("scroll", onScroll, true);
+  showEntryError._off = () => {
+    clearTimeout(timer);
+    window.removeEventListener("scroll", onScroll, true);
+    if (tip.parentNode) tip.parentNode.removeChild(tip);
+    showEntryError._off = null;
+  };
+}
+
 /* Pointer-based drag-and-drop reordering (works for mouse, touch and pen —
    unlike native HTML5 DnD, which most touch browsers don't support). Call
    after rendering a list of `.student-row[data-id]` elements inside
@@ -209,23 +244,23 @@ function openExportPreview(headline, sheetsHtml, onExcel, onPdf) {
   if (onPdf) document.getElementById("prevPdfBtn").addEventListener("click", () => { overlay.remove(); onPdf(); });
 }
 
-/* ---------------- Frozen header/nav/class-bar stack ---------------- */
-/* Header, nav and the class selector bar are all position:fixed in CSS so
-   they never scroll away — no need to scroll up to reach the tabs. This
-   measures their real (possibly wrapped) heights and stacks them precisely,
-   then pads <main> so content starts right below the stack. */
+/* ---------------- Frozen header/class-bar stack ---------------- */
+/* Header and the class selector bar are position:fixed in CSS so they never
+   scroll away. This measures their real (possibly wrapped) heights and stacks
+   them precisely, then pads <main> so content starts right below the stack.
+   The tab cards live inside <main> and scroll with the page. */
 function layoutFixedStack() {
   const header = document.querySelector("header");
   const nav = document.getElementById("tabs");
   const classBar = document.getElementById("classBar");
   const main = document.querySelector("main");
   if (!header || !nav || !classBar || !main) return;
+  // The tab cards (#tabs) now sit inside <main> as a 3-per-row grid, so only the
+  // header and the class bar are frozen at the top.
   const headerH = header.offsetHeight;
-  nav.style.top = headerH + "px";
-  const navH = nav.offsetHeight;
-  classBar.style.top = (headerH + navH) + "px";
+  classBar.style.top = headerH + "px";
   const classBarH = classBar.offsetHeight;
-  main.style.paddingTop = (headerH + navH + classBarH + 12) + "px";
+  main.style.paddingTop = (headerH + classBarH + 12) + "px";
 }
 window.addEventListener("load", layoutFixedStack);
 window.addEventListener("resize", () => { clearTimeout(layoutFixedStack._t); layoutFixedStack._t = setTimeout(layoutFixedStack, 80); });
@@ -578,7 +613,7 @@ function renderScoreEntry() {
         </select>
       </div>
       <div class="row" style="margin-top:8px;">
-        <input type="text" id="newSubjectInput" list="subjectSuggestions" placeholder="Add a subject (pick a suggestion or type your own)">
+        <input type="text" id="newSubjectInput" list="subjectSuggestions" placeholder="Add a subject (pick a suggestion or type your own)" maxlength="30">
         <button class="btn small secondary" id="addSubjectBtn">+ Add</button>
       </div>
       ${subjects.length > 0 ? `<button class="btn danger small no-print" id="removeSubjectBtn" style="margin-top:8px;">Remove "${esc(scoreEntryState.subject || "")}" from this class</button>` : ""}
@@ -608,9 +643,10 @@ function renderScoreEntry() {
   });
   document.getElementById("addSubjectBtn").addEventListener("click", () => {
     const input = document.getElementById("newSubjectInput");
-    const name = input.value.trim();
-    if (!name) return;
-    const finalName = addSubjectToClass(classId, name) || name;
+    const chk = checkSubjectName(input.value);
+    if (!chk.ok) { toast(chk.reason); return; }
+    const finalName = addSubjectToClass(classId, chk.name);
+    if (!finalName) { toast("That subject name can't be used"); return; }
     scoreEntryState.subject = finalName;
     toast(`"${finalName}" added`);
     renderScoreEntry();
@@ -666,11 +702,10 @@ function renderScoreEntry() {
         const term = scoreEntryState.term, subj = scoreEntryState.subject, studentId = inp.dataset.student;
         const field = inp.dataset.field;
         const raw = inp.value;
-        const clamped = clampScoreValue(field, raw);
-        if (raw !== "" && Number(raw) !== clamped) {
-          const label = field === "exam" ? "Exam" : field === "test1" ? "Test1" : "Test2";
-          toast(`${label} max is ${SCORE_MAX[field]} — adjusted`);
-        }
+        let check = checkScoreEntry(field, raw);
+        const invalid = !check.ok;
+        if (invalid) check = { ok: true, value: undefined };   // refused number: the box (and that entry) is left blank
+        const clamped = check.value;
         scores[classId] = scores[classId] || {};
         scores[classId][term] = scores[classId][term] || {};
         scores[classId][term][subj] = scores[classId][term][subj] || {};
@@ -681,9 +716,10 @@ function renderScoreEntry() {
         // the teacher had just moved to, so after each score the cursor vanished and the next
         // number typed went nowhere. Only the calculated cells (Total / Position / Grade —
         // positions can shift for every pupil) are refreshed, and the edited box shows the
-        // value that was actually saved (e.g. 75 typed in a /60 box becomes 60).
+        // value that was actually saved. (A number above the box's maximum never gets this far: it is refused.)
         inp.value = clamped === undefined ? "" : String(clamped);
         refreshScoreEntryComputed();
+        if (invalid) rejectEntry(inp);
       });
     });
   }
@@ -786,11 +822,12 @@ function renderRegister() {
   el.querySelectorAll(".opens-input").forEach((inp) => {
     inp.addEventListener("change", () => {
       const raw = inp.value;
-      const clamped = setSchoolOpensForWeek(classId, Number(inp.dataset.week), raw);
-      if (raw !== "" && Number(raw) !== clamped) toast(`School Opens max is ${MAX_SCHOOL_OPENS_PER_WEEK} (5 days × AM/PM) — adjusted`);
+      const invalid = !checkOpensEntry(raw).ok;
+      const clamped = setSchoolOpensForWeek(classId, Number(inp.dataset.week), invalid ? "" : raw);
       // Don't rebuild the table here: that destroys the box the person just tapped into.
       inp.value = clamped ? String(clamped) : "";
       refreshRegisterComputed();
+      if (invalid) rejectEntry(inp);
     });
   });
 
@@ -811,8 +848,9 @@ function renderRegister() {
         const outOfRange = wi < joinWeek || (leaveWeek != null && wi > leaveWeek);
         if (outOfRange) return `<td style="color:var(--muted);text-align:center;">–</td>`;
         const eligible = eligibleDaysForStudentWeek(classId, s.id, wi);
-        const weekCap = Math.max(0, Math.min(MAX_SCHOOL_OPENS_PER_WEEK, Number(rec.schoolOpensPerWeek[wi]) || 0));
-        return `<td><input type="number" class="wk-input" data-student="${esc(s.id)}" data-week="${wi}" value="${weeks[wi] ?? ""}" min="0" max="${weekCap}" style="width:44px;padding:4px;" title="${eligible} day(s) eligible this week"></td>`;
+        const weekCap = presentCapFor(classId, s.id, wi);
+        const shownVal = (weeks[wi] === undefined || weeks[wi] === null || weeks[wi] === "") ? "" : Math.min(Number(weeks[wi]) || 0, weekCap);
+        return `<td><input type="number" class="wk-input" data-student="${esc(s.id)}" data-week="${wi}" value="${shownVal}" min="0" max="${weekCap}" style="width:44px;padding:4px;" title="${eligible} day(s) eligible this week"></td>`;
       }).join("");
       const enrollRow = open ? `
         <tr class="enroll-row">
@@ -840,13 +878,14 @@ function renderRegister() {
     regBody.querySelectorAll(".wk-input").forEach((inp) => {
       inp.addEventListener("change", () => {
         const raw = inp.value;
-        const clamped = setStudentWeekPresent(classId, inp.dataset.student, Number(inp.dataset.week), raw);
-        if (raw !== "" && Number(raw) !== clamped) toast(`Can't exceed this week's School Opens — adjusted`);
+        const invalid = !checkPresentEntry(classId, Number(inp.dataset.week), raw, inp.dataset.student).ok;
+        const clamped = setStudentWeekPresent(classId, inp.dataset.student, Number(inp.dataset.week), invalid ? "" : raw);
         // Don't rebuild the table here: rebuilding replaced the box the person had just moved
-        // to, so the keyboard closed and they had to tap again. Show the saved (clamped) value
+        // to, so the keyboard closed and they had to tap again. Show the saved value
         // and refresh only the calculated cells.
         inp.value = clamped === undefined ? "" : String(clamped);
         refreshRegisterComputed();
+        if (invalid) rejectEntry(inp);
       });
     });
     /* Entry order: the keyboard's Next / Enter key goes DOWN a week's column (student to
@@ -903,8 +942,10 @@ function renderRegister() {
     const freshRec = attendanceForClass(classId);
     el.querySelectorAll(".wk-input").forEach((box) => {
       const wi = Number(box.dataset.week);
-      const cap = Math.max(0, Math.min(MAX_SCHOOL_OPENS_PER_WEEK, Number(freshRec.schoolOpensPerWeek[wi]) || 0));
+      const cap = presentCapFor(classId, box.dataset.student, wi);
       box.max = String(cap);
+      // School Opens was lowered under an existing mark: show the value that is actually counted.
+      if (document.activeElement !== box && box.value !== "" && Number(box.value) > cap) box.value = String(cap);
       box.title = `${eligibleDaysForStudentWeek(classId, box.dataset.student, wi)} day(s) eligible this week`;
     });
     el.querySelectorAll("tr[data-reg-row]").forEach((tr) => {

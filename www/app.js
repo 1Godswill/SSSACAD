@@ -11,8 +11,12 @@ const TERMS = ["1", "2", "3"]; // "A" = Annual, computed, not stored directly
 /* APP_VERSION now lives in version.js (loaded before this file). */
 
 /* ---------- Admin PIN (gate for the Admin tab) — local to this device ---------- */
-const DEFAULT_ADMIN_PIN = "4199";
-function getAdminPin() { return DB.get("adminPin", DEFAULT_ADMIN_PIN); }
+const DEFAULT_ADMIN_PIN = "@Admin";
+const OLD_DEFAULT_ADMIN_PIN = "4199"; // retired default: a device still holding it (never changed) moves to the new default
+function getAdminPin() {
+  const v = DB.get("adminPin", DEFAULT_ADMIN_PIN);
+  return (v === OLD_DEFAULT_ADMIN_PIN || typeof v !== "string" || !v) ? DEFAULT_ADMIN_PIN : v;
+}
 function setAdminPin(pin) { const prev = getAdminPin(); DB.set("adminPin", pin); commitSection("adminPin", prev, pin); }
 
 /* ---------- Per-class access codes ----------
@@ -83,12 +87,39 @@ const DB = {
       return v;
     } catch (e) { return fallback; }
   },
+  // When the phone's memory is full, setItem throws. We report it (red banner), then re-throw so the
+  // caller stops: that way a half-finished save can never leave data without its change-record.
+  _tx: null,
+  _remember(key) { if (DB._tx && !(key in DB._tx)) DB._tx[key] = localStorage.getItem(key); },
   set(key, val) {
     const raw = JSON.stringify(val);
-    if (raw === undefined) { localStorage.removeItem(key); DB._invalidate(key); return; }
+    if (raw === undefined) { DB._remember(key); localStorage.removeItem(key); DB._invalidate(key); return; }
     if (localStorage.getItem(key) === raw) return; // nothing changed: no write, no cache reset
-    localStorage.setItem(key, raw);
+    DB._remember(key);
+    try { localStorage.setItem(key, raw); }
+    catch (e) { StorageGuard.writeFailed(key, e); throw e; }
     DB._invalidate(key);
+  },
+  // Runs fn() as ONE all-or-nothing unit: if any write inside fails, every key written so far
+  // is put back exactly as it was.
+  transaction(fn) {
+    if (DB._tx) return fn();
+    DB._tx = {};
+    try { return fn(); }
+    catch (e) { DB._rollback(DB._tx); throw e; }
+    finally { DB._tx = null; }
+  },
+  _rollback(undo) {
+    const keys = Object.keys(undo);
+    for (let pass = 0; pass < 2; pass++) { // second pass retries anything that could not grow back the first time
+      keys.forEach((k) => {
+        try {
+          if (undo[k] === null) localStorage.removeItem(k);
+          else if (localStorage.getItem(k) !== undo[k]) localStorage.setItem(k, undo[k]);
+        } catch (e) { /* retried on the second pass */ }
+        DB._invalidate(k);
+      });
+    }
   },
   _invalidate(key) {
     delete DB._peek[key];
@@ -100,6 +131,126 @@ if (typeof window !== "undefined" && window.addEventListener) {
   window.addEventListener("storage", (e) => {
     if (e.key === null) { DB._peek = {}; _calcVersion++; } else DB._invalidate(e.key);
   });
+}
+
+/* ---------- Phone memory guard (v3.12.2) ----------
+   The app keeps its data in the phone's browser storage, which has a fixed ceiling (about 5 million
+   characters; the figure here is an estimate and errs on the safe side). Nothing used to warn before
+   it filled up. Now: (1) a failed save shows a red banner and is undone cleanly, (2) the banner also
+   appears when memory is 90% full, (3) Admin > Phone Memory shows the meter (amber from 70%),
+   (4) spare copies and old deletion records are cleared automatically (see below). */
+const STORAGE_LIMIT_CHARS = 5000000;
+const STORAGE_WARN_PCT = 70, STORAGE_ALERT_PCT = 90;
+const SPARE_COPY_KEEP_MS = 24 * 3600 * 1000;           // epochBackup: kept 1 day, then removed after a good sync
+const TOMB_KEEP_MS = 120 * 24 * 3600 * 1000;           // deletion records older than ~4 months are dropped
+
+function storageBreakdown() {
+  const parts = { data: 0, changes: 0, deletions: 0, spare: 0 };
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      const n = k.length + (localStorage.getItem(k) || "").length;
+      if (k.indexOf("tsTree_") === 0) parts.changes += n;
+      else if (k.indexOf("tomb_") === 0) parts.deletions += n;
+      else if (k === "epochBackup") parts.spare += n;
+      else parts.data += n;
+    }
+  } catch (e) { /* storage unreadable: report zeros */ }
+  const used = parts.data + parts.changes + parts.deletions + parts.spare;
+  return { parts: parts, used: used, limit: STORAGE_LIMIT_CHARS,
+    pct: Math.min(100, Math.round(used / STORAGE_LIMIT_CHARS * 100)) };
+}
+function storageUsage() { return storageBreakdown(); }
+function fmtChars(n) { return n >= 100000 ? (n / 1e6).toFixed(1) + " MB" : Math.round(n / 1000) + " KB"; }
+
+const StorageGuard = {
+  full: false,          // a save has failed since the app opened
+  hiddenAt: 0,
+  last: null,
+  writeFailed(key, err) {
+    StorageGuard.full = true;
+    StorageGuard.hiddenAt = 0;
+    StorageGuard.render();
+    if (typeof toast === "function") { try { toast("Memory full — your last change was NOT saved"); } catch (e) { /* ignore */ } }
+  },
+  // Measures usage, shows/hides the banner. Cheap enough to call after every sync.
+  check() {
+    const u = storageUsage();
+    StorageGuard.last = u;
+    if (u.pct < STORAGE_ALERT_PCT && StorageGuard.full && u.pct < STORAGE_WARN_PCT) StorageGuard.full = false; // space was freed
+    StorageGuard.render();
+    return u;
+  },
+  render() {
+    if (typeof document === "undefined" || !document.body) return;
+    const u = StorageGuard.last || storageUsage();
+    const show = StorageGuard.full || u.pct >= STORAGE_ALERT_PCT;
+    let el = document.getElementById("storageBanner");
+    const hidden = !StorageGuard.full && StorageGuard.hiddenAt && (Date.now() - StorageGuard.hiddenAt) < 3600 * 1000;
+    if (!show || hidden) { if (el) el.style.display = "none"; return; }
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "storageBanner";
+      el.className = "no-print";
+      el.style.cssText = "position:sticky;top:0;z-index:9998;background:#c62828;color:#fff;padding:8px 10px;font-size:13px;font-weight:600;display:flex;gap:8px;align-items:center;flex-wrap:wrap;";
+      document.body.insertBefore(el, document.body.firstChild);
+    }
+    el.style.display = "flex";
+    el.innerHTML = "";
+    const msg = document.createElement("span");
+    msg.style.flex = "1 1 200px";
+    msg.textContent = StorageGuard.full
+      ? "⚠ Memory full — your last change was NOT saved. Make a backup now, then free up space in Admin > Phone Memory."
+      : "⚠ Memory almost full (" + u.pct + "%). Make a backup now, then free up space in Admin > Phone Memory.";
+    el.appendChild(msg);
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = "Make backup";
+    b.style.cssText = "background:#fff;color:#c62828;border:none;border-radius:8px;padding:6px 10px;font-weight:700;";
+    b.addEventListener("click", () => { if (typeof downloadBackupFile === "function") downloadBackupFile(); });
+    el.appendChild(b);
+    if (!StorageGuard.full) {
+      const x = document.createElement("button");
+      x.type = "button"; x.textContent = "Hide";
+      x.style.cssText = "background:transparent;color:#fff;border:1px solid #fff;border-radius:8px;padding:6px 10px;";
+      x.addEventListener("click", () => { StorageGuard.hiddenAt = Date.now(); StorageGuard.render(); });
+      el.appendChild(x);
+    }
+  },
+};
+if (typeof document !== "undefined" && document.addEventListener) {
+  document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(StorageGuard.check, 1500);
+    setInterval(StorageGuard.check, 5 * 60 * 1000);
+  });
+}
+
+// The spare copy a phone keeps when it catches up to a new session (key "epochBackup"). Nothing in the app
+// reads it back, so it only takes room. Removed once it is a day old (or right away if memory is 70%+ full,
+// or when forced by the Free up space button).
+function cleanupSpareCopies(force) {
+  let raw = null;
+  try { raw = localStorage.getItem("epochBackup"); } catch (e) { return false; }
+  if (!raw) return false;
+  let at = 0;
+  try { at = Number(JSON.parse(raw).at) || 0; } catch (e) { at = 0; }
+  const old = (Date.now() - at) > SPARE_COPY_KEEP_MS;
+  if (old || force || storageUsage().pct >= STORAGE_WARN_PCT) {
+    try { localStorage.removeItem("epochBackup"); DB._invalidate("epochBackup"); return true; } catch (e) { return false; }
+  }
+  return false;
+}
+// Drops deletion records older than TOMB_KEEP_MS from this device (sync does the same while merging, so
+// every device ends up clean). Returns how many were removed.
+function pruneOldDeletionRecords() {
+  const now = Date.now();
+  let removed = 0;
+  Object.keys(ID_ARRAY_SECTIONS).forEach((section) => {
+    const t = loadTombstones(section);
+    const keep = {};
+    Object.keys(t).forEach((id) => { if (now - (Number(t[id]) || 0) <= TOMB_KEEP_MS) keep[id] = t[id]; else removed++; });
+    if (Object.keys(keep).length !== Object.keys(t).length) saveTombstones(section, keep);
+  });
+  return removed;
 }
 
 // Ids arrive from other devices through sync, so they are treated as untrusted:
@@ -175,8 +326,8 @@ function renameDevice(id, name) {
 // write to the shared store, so a device only re-stamps itself every
 // HEARTBEAT_EVERY_MS (or whenever it has real changes to send anyway);
 // anything heard from within the online window counts as online.
-const HEARTBEAT_EVERY_MS = 5 * 60 * 1000;
-const DEVICE_ONLINE_WINDOW_MS = HEARTBEAT_EVERY_MS + 60 * 1000;
+const HEARTBEAT_EVERY_MS = 10 * 60 * 1000;
+const DEVICE_ONLINE_WINDOW_MS = HEARTBEAT_EVERY_MS + 2 * 60 * 1000;
 function isDeviceOnline(lastSeen) { return typeof lastSeen === "number" && (Date.now() - lastSeen) < DEVICE_ONLINE_WINDOW_MS; }
 
 /* ---------- Per-FIELD change tracking (recursive) ----------
@@ -255,9 +406,24 @@ function ensureTsTree(section, currentData) {
   return tree;
 }
 
+// Saves a section's change-record. If the phone's memory is full part-way, EVERYTHING is undone —
+// the change-record and the section itself — so data and timestamps can never disagree.
+function commitSection(section, prevData, newData, opts) {
+  try {
+    return DB.transaction(() => _commitSectionWrites(section, prevData, newData, opts));
+  } catch (e) {
+    try {
+      const raw = JSON.stringify(prevData);
+      if (raw === undefined) localStorage.removeItem(section); else localStorage.setItem(section, raw);
+      DB._invalidate(section);
+    } catch (e2) { /* nothing more can be done */ }
+    throw e;
+  }
+}
+
 // Call after writing a section's new data to storage: diffs against what
 // was there a moment ago and stamps only the leaves that actually changed.
-function commitSection(section, prevData, newData, opts) {
+function _commitSectionWrites(section, prevData, newData, opts) {
   const now = Date.now();
   if (ID_ARRAY_SECTIONS[section]) {
     const oldMap = arrayToMap(prevData), newMap = arrayToMap(newData);
@@ -610,9 +776,30 @@ function loadSubjectTomb() { return DB.get("subjectTomb", {}); }
 function saveSubjectTomb(t) { const prev = loadSubjectTomb(); DB.set("subjectTomb", t); commitSection("subjectTomb", prev, t); }
 function subjectTombKey(classId, subjectName) { return classId + "::" + subjectName; }
 
+/* Subject-name rules. A name is used as an object key all over the app (scores, ticks, sync),
+   so it must be short and must never be a name JavaScript objects already own. */
+const MAX_SUBJECT_NAME_LENGTH = 30;
+const BLOCKED_SUBJECT_NAMES = [
+  "constructor", "__proto__", "prototype", "proto", "hasownproperty", "isprototypeof",
+  "propertyisenumerable", "tostring", "tolocalestring", "valueof", "tojson",
+  "__definegetter__", "__definesetter__", "__lookupgetter__", "__lookupsetter__"
+];
+// Returns { ok:true, name } (trimmed, single-spaced) or { ok:false, reason }.
+function checkSubjectName(raw) {
+  const name = String(raw == null ? "" : raw).replace(/\s+/g, " ").trim();
+  if (!name) return { ok: false, reason: "Type a subject name first" };
+  if (name.length > MAX_SUBJECT_NAME_LENGTH) return { ok: false, reason: "Subject name is too long (max " + MAX_SUBJECT_NAME_LENGTH + " letters)" };
+  const low = name.toLowerCase();
+  if (BLOCKED_SUBJECT_NAMES.includes(low) || low.indexOf("__") !== -1) {
+    return { ok: false, reason: "\"" + name + "\" can't be used as a subject name" };
+  }
+  return { ok: true, name: name };
+}
+
 function addSubjectToClass(classId, subjectName) {
-  let name = (subjectName || "").trim();
-  if (!name) return;
+  const chk = checkSubjectName(subjectName);
+  if (!chk.ok) return;
+  let name = chk.name;
   const cs = loadClassSubjects();
   cs[classId] = cs[classId] || [];
   // Everything is typed in capitals now, so match an existing subject ignoring case
@@ -635,12 +822,14 @@ function addSubjectToClass(classId, subjectName) {
 /* ---------- Scores: scores[classId][term][subjectName][studentId] = {test1,test2,exam} ----------
    Max obtainable per the report card header: Test1/Test2 = 20, Exam = 60. */
 const SCORE_MAX = { test1: 20, test2: 20, exam: 60 };
-function clampScoreValue(field, raw) {
-  if (raw === "" || raw == null) return undefined;
+/* Entry checks. A number outside the allowed range is REFUSED ({ ok:false }), never quietly changed to
+   the nearest allowed value. A blank box is fine: it clears the entry. */
+function checkScoreEntry(field, raw) {
+  if (raw === "" || raw == null) return { ok: true, value: undefined };
+  const n = Number(raw);
   const max = SCORE_MAX[field] || 0;
-  const n = Math.round(Number(raw));
-  if (!isFinite(n)) return undefined;
-  return Math.max(0, Math.min(max, n));
+  if (!isFinite(n) || n < 0 || n > max) return { ok: false };
+  return { ok: true, value: Math.round(n) };
 }
 function loadScores() { return DB.get("scores", {}); }
 function saveScores(s) { const prev = loadScores(); DB.set("scores", s); commitSection("scores", prev, s); }
@@ -1010,8 +1199,11 @@ function studentAttendanceSummary(classId, studentId, term) {
   let opens = 0, present = 0;
   for (let w = 0; w < nWeeks; w++) {
     if (!weekInView(classId, w, term)) continue;
-    opens += eligibleDaysForStudentWeek(classId, studentId, w);
-    present += Number(weeks[w]) || 0;
+    const elig = eligibleDaysForStudentWeek(classId, studentId, w);
+    opens += elig;
+    // Never count more days present than the days this pupil was eligible for that week
+    // (School Opens may have been lowered later, or the pupil joined mid-week).
+    present += Math.min(Math.max(0, Number(weeks[w]) || 0), elig);
   }
   const pct = opens > 0 ? (present / opens) * 100 : 0;
   return { present: present, opens: opens, absent: Math.max(0, opens - present), pct: pct };
@@ -1028,6 +1220,28 @@ function attendanceRatingFor(pct) {
 // A week is 5 school days, each counted morning + afternoon.
 const MAX_SCHOOL_OPENS_PER_WEEK = 10;
 
+function checkOpensEntry(raw) {
+  if (raw === "" || raw == null) return { ok: true, value: 0 };          // a blank box clears the week
+  const n = Number(raw);
+  if (!isFinite(n) || n < 0 || n > MAX_SCHOOL_OPENS_PER_WEEK) return { ok: false };
+  return { ok: true, value: Math.round(n) };
+}
+/* The most days a pupil can be marked present in a week: the days THEY were eligible for
+   (school opens, trimmed for a mid-week join/leave), never more than the weekly maximum. */
+function presentCapFor(classId, studentId, weekIdx) {
+  const rec = attendanceForClass(classId);
+  const opens = Number((rec.schoolOpensPerWeek || [])[weekIdx]) || 0;
+  const elig = studentId ? eligibleDaysForStudentWeek(classId, studentId, weekIdx) : opens;
+  return Math.max(0, Math.min(MAX_SCHOOL_OPENS_PER_WEEK, opens, elig));
+}
+// Days present can't be more than the days this pupil was eligible for that week.
+function checkPresentEntry(classId, weekIdx, raw, studentId) {
+  if (raw === "" || raw == null) return { ok: true, value: undefined };
+  const cap = presentCapFor(classId, studentId, weekIdx);
+  const n = Number(raw);
+  if (!isFinite(n) || n < 0 || n > cap) return { ok: false };
+  return { ok: true, value: Math.round(n) };
+}
 function setSchoolOpensForWeek(classId, weekIdx, value) {
   const a = loadAttendance();
   a[classId] = a[classId] || { schoolOpensPerWeek: [], students: {} };
@@ -1046,8 +1260,8 @@ function setStudentWeekPresent(classId, studentId, weekIdx, value) {
     saveAttendance(a);
     return undefined;
   }
-  // Can't be present more days than the school actually opened that week.
-  const cap = Math.max(0, Math.min(MAX_SCHOOL_OPENS_PER_WEEK, Number(a[classId].schoolOpensPerWeek[weekIdx]) || 0));
+  // Can't be present more days than this pupil was eligible for that week.
+  const cap = presentCapFor(classId, studentId, weekIdx);
   const n = Math.max(0, Math.min(cap, Math.round(Number(value)) || 0));
   a[classId].students[studentId][weekIdx] = n;
   saveAttendance(a);
@@ -1086,8 +1300,9 @@ function classAttendanceSummary(classId, term) {
     let total = 0;
     let maxPossible = 0;
     students.forEach((s) => {
-      total += Number((rec.students[s.id] || [])[w]) || 0;
-      maxPossible += eligibleDaysForStudentWeek(classId, s.id, w);
+      const elig = eligibleDaysForStudentWeek(classId, s.id, w);
+      total += Math.min(Math.max(0, Number((rec.students[s.id] || [])[w]) || 0), elig);
+      maxPossible += elig;
     });
     maxPossibleTerm += maxPossible;
     weeklyTotals.push({

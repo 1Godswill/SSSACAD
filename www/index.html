@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ST. STEPHEN'S SCHOOL Otuoke</title>
+<title>ST. STEPHEN'S SCHOOL OTUOKE</title>
 
 <!-- PWA setup -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -50,6 +50,45 @@
   nav button{flex:0 0 auto;background:none;border:none;color:#fff;padding:9px 14px;font-size:13px;opacity:.75;white-space:nowrap;border-radius:9px;font-weight:600;}
   nav button.active{opacity:1;background:var(--brand);}
   main{padding:150px 12px 60px;max-width:900px;margin:0 auto;}
+  /* ---- Tab cards: 3 per row, each with a glossy 3D-style animated icon ---- */
+  nav#tabs{position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;overflow:visible;background:none;padding:0;margin:0 0 14px;}
+  nav#tabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:96px;padding:12px 4px 10px;
+    background:var(--card);border:1px solid var(--border);border-radius:18px;color:var(--text);opacity:1;font-size:12px;font-weight:700;line-height:1.2;
+    white-space:normal;text-align:center;box-shadow:0 2px 8px rgba(16,35,64,.08);transition:transform .15s,box-shadow .2s,background .2s;-webkit-tap-highlight-color:transparent;}
+  nav#tabs button:active{transform:scale(.95);}
+  nav#tabs button.active{background:var(--brand-light);border-color:var(--brand);color:var(--navy);box-shadow:0 0 0 2px var(--brand),0 8px 18px rgba(47,111,235,.25);}
+  nav#tabs .ic{width:48px;height:48px;overflow:visible;flex:0 0 auto;filter:drop-shadow(0 4px 4px rgba(20,37,68,.22));}
+  nav#tabs .ic-body{animation:icFloat 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%;}
+  nav#tabs .ic-shadow{animation:icShadow 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center;}
+  nav#tabs button:nth-child(2) .ic-body,nav#tabs button:nth-child(2) .ic-shadow{animation-delay:-.5s;}
+  nav#tabs button:nth-child(3) .ic-body,nav#tabs button:nth-child(3) .ic-shadow{animation-delay:-1s;}
+  nav#tabs button:nth-child(4) .ic-body,nav#tabs button:nth-child(4) .ic-shadow{animation-delay:-1.5s;}
+  nav#tabs button:nth-child(5) .ic-body,nav#tabs button:nth-child(5) .ic-shadow{animation-delay:-2s;}
+  nav#tabs button:nth-child(6) .ic-body,nav#tabs button:nth-child(6) .ic-shadow{animation-delay:-2.5s;}
+  nav#tabs button.active .ic{transform:scale(1.1);transition:transform .2s;}
+  nav#tabs button.active .ic-body{animation-duration:1.8s;}
+  @keyframes icFloat{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-3px) scale(1.04);}}
+  @keyframes icShadow{0%,100%{transform:scaleX(1);opacity:.14;}50%{transform:scaleX(.8);opacity:.08;}}
+  /* per-icon details */
+  .ic .tick{stroke-dasharray:14;stroke-dashoffset:14;animation:icTick 3.6s ease-in-out infinite;}
+  .ic .tick.t2{animation-delay:.5s;} .ic .tick.t3{animation-delay:1s;}
+  @keyframes icTick{0%{stroke-dashoffset:14;}25%,80%{stroke-dashoffset:0;}100%{stroke-dashoffset:14;}}
+  .ic .pencil{animation:icWrite 1.8s ease-in-out infinite;}
+  @keyframes icWrite{0%,100%{transform:translate(0,0);}50%{transform:translate(-5px,2px);}}
+  .ic .scribble{stroke-dasharray:40;stroke-dashoffset:40;animation:icScribble 1.8s ease-in-out infinite;}
+  @keyframes icScribble{0%{stroke-dashoffset:40;}60%,100%{stroke-dashoffset:0;}}
+  .ic .bar{transform-box:fill-box;transform-origin:50% 100%;animation:icBar 2.6s ease-in-out infinite;}
+  .ic .bar.b2{animation-delay:.25s;} .ic .bar.b3{animation-delay:.5s;}
+  @keyframes icBar{0%,100%{transform:scaleY(.55);}50%{transform:scaleY(1);}}
+  .ic .badge{transform-box:fill-box;transform-origin:center;animation:icBadge 2.4s ease-in-out infinite;}
+  @keyframes icBadge{0%,100%{transform:rotate(-8deg) scale(1);}50%{transform:rotate(8deg) scale(1.1);}}
+  .ic .cell{animation:icCell 2.4s ease-in-out infinite;}
+  .ic .cell.c2{animation-delay:.3s;} .ic .cell.c3{animation-delay:.6s;} .ic .cell.c4{animation-delay:.9s;} .ic .cell.c5{animation-delay:1.2s;} .ic .cell.c6{animation-delay:1.5s;}
+  @keyframes icCell{0%,100%{opacity:.55;}50%{opacity:1;}}
+  .ic .head{transform-box:fill-box;transform-origin:50% 100%;animation:icNod 3.2s ease-in-out infinite;}
+  @keyframes icNod{0%,100%{transform:translateY(0);}50%{transform:translateY(-1.5px);}}
+  @media (prefers-reduced-motion:reduce){ nav#tabs *,.ic *{animation:none !important;} .ic .tick,.ic .scribble{stroke-dashoffset:0 !important;} }
+
   .tab{display:none;}
   .tab.active{display:block;}
   .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(16,35,64,.05);}
@@ -154,10 +193,11 @@
   .gate-title{margin:0;font-size:18px;font-weight:800;color:var(--navy);}
   .gate-sub{margin:4px 0 18px;font-size:13px;color:var(--muted);}
   .gate-card-wide{max-width:600px;padding:20px 12px 16px;background:rgba(255,255,255,.40);}
+  .entry-rejected{outline:2px solid #c62828 !important;background:#ffebee !important;}
   .gate-pick-head{margin:4px 0 14px;text-align:center;}
   .gate-pick-cap{width:26px;height:26px;margin:0 auto 2px;color:var(--navy);}
   .gate-pick-cap svg{width:100%;height:100%;display:block;}
-  .gate-pick-title{display:flex;align-items:center;gap:10px;justify-content:center;font-size:16px;font-weight:800;letter-spacing:.5px;color:var(--navy);}
+  .gate-pick-title{display:flex;align-items:center;gap:10px;justify-content:center;font-size:15px;font-weight:800;letter-spacing:.2px;color:var(--navy);text-transform:none;text-align:center;}
   .gate-pick-title::before,.gate-pick-title::after{content:"";flex:1;max-width:60px;height:2px;border-radius:2px;background:#b3166f;}
   .gate-pick-sub{margin-top:3px;font-size:12px;font-style:italic;color:var(--muted);text-transform:none;letter-spacing:0;}
   .gate-class-list{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;}
@@ -205,6 +245,21 @@
   .gate-admin-chev{width:16px;height:16px;display:block;}
   .gate-admin-chev svg{width:100%;height:100%;display:block;}
   .gate-back-link{display:block;width:100%;background:none;border:none;color:var(--muted);font-size:12.5px;font-weight:600;text-decoration:underline;margin-top:14px;padding:6px;}
+
+  /* Admin lock screen: full-screen, keyboard only */
+  .gate-admin-lock{position:relative;max-width:420px;padding:22px 10px 14px;}
+  .gate-admin-lockico{font-size:34px;line-height:1;margin-bottom:4px;}
+  .gate-admin-exit{position:absolute;top:8px;right:8px;width:42px;height:42px;border:none;border-radius:12px;background:rgba(255,255,255,.7);font-size:22px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
+  .gate-admin-dots{height:34px;line-height:34px;margin:6px 8px 12px;border:1.5px solid var(--border);border-radius:10px;background:rgba(255,255,255,.85);font-size:16px;letter-spacing:4px;color:var(--navy);overflow:hidden;white-space:nowrap;}
+  .gate-kb{display:flex;flex-direction:column;gap:6px;}
+  .gate-kb-row{display:flex;gap:4px;justify-content:center;}
+  .gate-key{flex:1 1 0;min-width:0;height:44px;border:1px solid rgba(20,37,68,.12);border-radius:9px;background:#fff;color:var(--navy);font-size:17px;font-weight:700;padding:0;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+  .gate-key:active{background:#e3e8f5;}
+  .gate-key-fn{flex:1.5 1 0;background:#eef1f7;}
+  .gate-key-fn.on{background:var(--brand,#3b5bdb);color:#fff;}
+  .gate-key-go{flex:1 1 100%;height:48px;background:var(--brand,#3b5bdb);color:#fff;font-size:16px;letter-spacing:.5px;}
+  @keyframes gateShake{10%,90%{transform:translateX(-2px);}20%,80%{transform:translateX(4px);}30%,50%,70%{transform:translateX(-7px);}40%,60%{transform:translateX(7px);}}
+  .gate-shake{animation:gateShake .45s;}
   .gate-pin-row{display:flex;gap:8px;justify-content:center;margin:4px 0;flex-wrap:wrap;}
   .gate-pin-box{width:40px;height:50px;text-align:center;font-size:22px;font-weight:700;border:1.5px solid var(--border);border-radius:10px;padding:0;}
   .gate-pin-box:focus{border-color:var(--brand);outline:2px solid var(--brand-light);}
@@ -312,7 +367,7 @@
     <div style="display:flex;align-items:center;gap:10px;">
       <img src="icons/logo.png" alt="School logo" style="width:42px;height:42px;flex:0 0 auto;">
       <div>
-        <h1 class="no-caps">ST. STEPHEN'S SCHOOL Otuoke</h1>
+        <h1 class="no-caps">ST. STEPHEN'S SCHOOL OTUOKE</h1>
         <p>Nursery, Primary and Secondary School — Report Card System <span id="appVersionBadge" style="opacity:.8;"></span></p>
         <p id="liveClock" class="no-caps" style="margin:2px 0 0;font-size:11px;font-weight:700;color:var(--brand);"></p>
       </div>
@@ -321,18 +376,18 @@
   </div>
 </header>
 
-<nav id="tabs">
-  <button data-tab="students" class="active">Students</button>
-  <button data-tab="registertab">Register</button>
-  <button data-tab="scoreentry">Score Entry</button>
-  <button data-tab="classreport">Class Report</button>
-  <button data-tab="reportcard">Report Card</button>
-  <button data-tab="broadsheet">Broadsheet</button>
-</nav>
 
 <div id="classBar" class="no-print"></div>
 
 <main>
+<nav id="tabs">
+  <button data-tab="students" class="active"><svg class="ic ic-students" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gsA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5db1ff"/><stop offset="1" stop-color="#1747d6"/></linearGradient><linearGradient id="gsB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#cddfff"/></linearGradient></defs><ellipse class="ic-shadow" cx="32" cy="60" rx="16" ry="3" fill="#142544" opacity=".14"/><g class="ic-body"><rect x="12" y="5" width="42" height="52" rx="6" fill="url(#gsA)"/><rect x="12" y="5" width="9" height="52" rx="4.5" fill="#0f2f9c" opacity=".55"/><rect x="23" y="8" width="28" height="7" rx="3.5" fill="#fff" opacity=".28"/><g class="head"><circle cx="37" cy="26" r="7.5" fill="url(#gsB)"/></g><path d="M24 47c0-8.5 6.2-12.5 13-12.5S50 38.5 50 47z" fill="url(#gsB)"/></g></svg><span>Students</span></button>
+  <button data-tab="registertab"><svg class="ic ic-register" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="grA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd35c"/><stop offset="1" stop-color="#e8890a"/></linearGradient><linearGradient id="grB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#e6ecf7"/></linearGradient><linearGradient id="grC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9dfeb"/><stop offset="1" stop-color="#7f8ca3"/></linearGradient></defs><ellipse class="ic-shadow" cx="32" cy="60" rx="16" ry="3" fill="#142544" opacity=".14"/><g class="ic-body"><rect x="11" y="9" width="42" height="49" rx="7" fill="url(#grA)"/><rect x="17" y="15" width="30" height="38" rx="3.5" fill="url(#grB)"/><rect x="22" y="4" width="20" height="11" rx="4.5" fill="url(#grC)"/><circle cx="32" cy="8.5" r="2" fill="#fff" opacity=".8"/><path class="tick t1" d="M22 26l3.2 3.2 5.6-6.4" stroke="#1fa971" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="34" y="25" width="9" height="3.2" rx="1.6" fill="#c3cbd9"/><path class="tick t2" d="M22 37l3.2 3.2 5.6-6.4" stroke="#1fa971" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="34" y="36" width="9" height="3.2" rx="1.6" fill="#c3cbd9"/><path class="tick t3" d="M22 48l3.2 3.2 5.6-6.4" stroke="#1fa971" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="34" y="47" width="9" height="3.2" rx="1.6" fill="#c3cbd9"/></g></svg><span>Register</span></button>
+  <button data-tab="scoreentry"><svg class="ic ic-score" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gcA" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffe066"/><stop offset=".5" stop-color="#ffc400"/><stop offset="1" stop-color="#e09a00"/></linearGradient><linearGradient id="gcB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6b6b"/><stop offset="1" stop-color="#d11f3d"/></linearGradient><linearGradient id="gcC" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#eef1f7"/><stop offset="1" stop-color="#8f9bb3"/></linearGradient></defs><ellipse class="ic-shadow" cx="32" cy="60" rx="16" ry="3" fill="#142544" opacity=".14"/><g class="ic-body"><path class="scribble" d="M8 57q6-7 12 0t12 0t12 0" stroke="#2f6feb" stroke-width="3" fill="none" stroke-linecap="round"/><g transform="rotate(38 32 30)"><g class="pencil"><rect x="26" y="2" width="12" height="9" rx="3.5" fill="url(#gcB)"/><rect x="26" y="10" width="12" height="5" fill="url(#gcC)"/><rect x="26" y="15" width="12" height="28" fill="url(#gcA)"/><rect x="29" y="15" width="3" height="28" fill="#fff" opacity=".35"/><path d="M26 43h12l-6 12z" fill="#f6d2a2"/><path d="M29.5 49.5h5L32 55z" fill="#2b3447"/></g></g></g></svg><span>Score Entry</span></button>
+  <button data-tab="classreport"><svg class="ic ic-classrep" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gkA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dfe8f8"/></linearGradient><linearGradient id="gkB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4be0a0"/><stop offset="1" stop-color="#0f9a5e"/></linearGradient><linearGradient id="gkC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb866"/><stop offset="1" stop-color="#ec7a1c"/></linearGradient><linearGradient id="gkD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6db8ff"/><stop offset="1" stop-color="#1f5fe0"/></linearGradient></defs><ellipse class="ic-shadow" cx="32" cy="60" rx="16" ry="3" fill="#142544" opacity=".14"/><g class="ic-body"><rect x="6" y="6" width="52" height="52" rx="10" fill="url(#gkA)"/><rect x="6" y="6" width="52" height="52" rx="10" fill="none" stroke="#cdd8ee" stroke-width="1.5"/><rect class="bar b1" x="14" y="26" width="9" height="26" rx="3" fill="url(#gkB)"/><rect class="bar b2" x="27.5" y="16" width="9" height="36" rx="3" fill="url(#gkC)"/><rect class="bar b3" x="41" y="22" width="9" height="30" rx="3" fill="url(#gkD)"/><rect x="10" y="9" width="44" height="6" rx="3" fill="#fff" opacity=".6"/></g></svg><span>Class Report</span></button>
+  <button data-tab="reportcard"><svg class="ic ic-reportcard" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gpA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dde5f5"/></linearGradient><linearGradient id="gpB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6767"/><stop offset="1" stop-color="#d4192f"/></linearGradient><linearGradient id="gpC" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe680"/><stop offset="1" stop-color="#f0a800"/></linearGradient></defs><ellipse class="ic-shadow" cx="32" cy="60" rx="16" ry="3" fill="#142544" opacity=".14"/><g class="ic-body"><rect x="7" y="5" width="40" height="52" rx="6" fill="url(#gpA)"/><rect x="7" y="5" width="40" height="12" rx="6" fill="#2f6feb"/><rect x="7" y="12" width="40" height="5" fill="#2f6feb"/><rect x="13" y="23" width="22" height="3.5" rx="1.7" fill="#b9c4da"/><rect x="13" y="31" width="28" height="3.5" rx="1.7" fill="#b9c4da"/><rect x="13" y="39" width="18" height="3.5" rx="1.7" fill="#b9c4da"/><g class="badge"><path d="M41 44l-5 14 7-3 5 5 2-15z" fill="#b3122a"/><circle cx="46" cy="40" r="13" fill="url(#gpB)"/><circle cx="46" cy="40" r="9.5" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="1.5"/><path d="M46 33.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7-4.2-2.2-4.2 2.2.8-4.7-3.4-3.3 4.7-.7z" fill="url(#gpC)"/></g></g></svg><span>Report Card</span></button>
+  <button data-tab="broadsheet"><svg class="ic ic-broadsheet" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gbA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#43e39c"/><stop offset="1" stop-color="#0c8a52"/></linearGradient></defs><ellipse class="ic-shadow" cx="32" cy="60" rx="16" ry="3" fill="#142544" opacity=".14"/><g class="ic-body"><rect x="5" y="9" width="54" height="46" rx="7" fill="url(#gbA)"/><rect x="9" y="13" width="46" height="9" rx="3" fill="#fff" opacity=".95"/><rect class="cell c1" x="9" y="25" width="14" height="8" rx="2.5" fill="#fff"/><rect class="cell c2" x="25" y="25" width="14" height="8" rx="2.5" fill="#fff"/><rect class="cell c3" x="41" y="25" width="14" height="8" rx="2.5" fill="#fff"/><rect class="cell c4" x="9" y="36" width="14" height="8" rx="2.5" fill="#fff"/><rect class="cell c5" x="25" y="36" width="14" height="8" rx="2.5" fill="#fff"/><rect class="cell c6" x="41" y="36" width="14" height="8" rx="2.5" fill="#fff"/><rect x="9" y="47" width="46" height="4" rx="2" fill="#fff" opacity=".35"/></g></svg><span>Broadsheet</span></button>
+</nav>
   <div id="students" class="tab active" data-theme="theme-students"></div>
   <div id="registertab" class="tab" data-theme="theme-registertab"></div>
   <div id="scoreentry" class="tab" data-theme="theme-scoreentry"></div>

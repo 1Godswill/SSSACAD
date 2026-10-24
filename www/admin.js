@@ -78,6 +78,49 @@ function runRestore(result) {
 /* One-time cleanup of data left behind by pre-3.6.0 deletions — see
    cleanupLegacyOrphans() in history.js. No Undo here on purpose: this is
    data the app hasn't been able to show or restore for a long time. */
+/* Phone Memory card: how full the phone's storage is, what is taking the room, and a one-tap tidy-up. */
+function memoryCardHtml() {
+  const u = storageUsage();
+  const tone = u.pct >= STORAGE_ALERT_PCT ? { c: "#c62828", t: "Almost full — make a backup now" }
+    : u.pct >= STORAGE_WARN_PCT ? { c: "#e09b00", t: "Getting full — make a backup soon" }
+    : { c: "#2e9d5b", t: "Healthy" };
+  const p = u.parts;
+  return `
+    <div class="card" id="memoryCard">
+      <h2>Phone Memory</h2>
+      <div style="height:14px;background:#e6e9ef;border-radius:8px;overflow:hidden;">
+        <div style="height:100%;width:${Math.max(2, u.pct)}%;background:${tone.c};"></div>
+      </div>
+      <p style="font-size:13px;margin:8px 0 2px;"><b style="color:${tone.c};">${u.pct}% used — ${tone.t}</b></p>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 6px;">
+        About ${fmtChars(u.used)} of roughly ${fmtChars(u.limit)} (an estimate, kept on the safe side).
+      </p>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 8px;">
+        Scores &amp; records ${fmtChars(p.data)} · change records ${fmtChars(p.changes)} ·
+        deletion records ${fmtChars(p.deletions)} · spare copy ${fmtChars(p.spare)}
+      </p>
+      <div class="row">
+        <button class="btn secondary" id="memBackupBtn">Make a backup now</button>
+        <button class="btn secondary" id="memFreeBtn">🧹 Free up space</button>
+      </div>
+    </div>`;
+}
+function wireMemoryCard() {
+  const b = document.getElementById("memBackupBtn");
+  if (b) b.addEventListener("click", () => downloadBackupFile());
+  const f = document.getElementById("memFreeBtn");
+  if (f) f.addEventListener("click", () => {
+    const before = storageUsage().used;
+    const spare = cleanupSpareCopies(true);
+    const old = pruneOldDeletionRecords();
+    const u = StorageGuard.check();
+    const freed = Math.max(0, before - u.used);
+    toast(freed > 0 ? "Freed about " + fmtChars(freed) : "Nothing old to clear — your data is what is using the space");
+    if (spare || old) { if (typeof Sync !== "undefined" && Sync.isConfigured()) Sync.syncNow({ force: true }); }
+    renderAdminTab();
+  });
+}
+
 function cleanupCardHtml() {
   return `
     <div class="card">
@@ -347,7 +390,7 @@ function renderAdminTab() {
         <h2>🔐 Admin Access</h2>
         <p style="font-size:12.5px;color:var(--muted);">Enter the admin PIN to manage class access codes, announcements, sync, export and backup.</p>
         <div class="row">
-          <input type="password" id="adminPinInput" placeholder="PIN" inputmode="numeric" style="padding:8px;">
+          <input type="password" id="adminPinInput" placeholder="PIN" inputmode="text" autocomplete="off" style="padding:8px;">
           <button class="btn" id="adminPinBtn">Unlock</button>
         </div>
       </div>
@@ -421,7 +464,7 @@ function renderAdminTab() {
         ? `<p style="font-size:12.5px;color:#9a6c10;background:var(--warning-bg);border-left:4px solid var(--warning);padding:8px 10px;border-radius:8px;"><b>This is still the default PIN (${DEFAULT_ADMIN_PIN}).</b> Anyone who has seen the app's code knows it — set your own below.</p>`
         : `<p style="font-size:12.5px;color:var(--muted);">A custom PIN is set on this device.</p>`}
       <div class="row">
-        <input type="password" id="newAdminPin" placeholder="New PIN" inputmode="numeric" style="padding:6px;">
+        <input type="password" id="newAdminPin" placeholder="New PIN" inputmode="text" maxlength="32" autocomplete="off" style="padding:6px;">
         <button class="btn small secondary" id="saveAdminPinBtn">Save PIN</button>
       </div>
     </div>
@@ -434,6 +477,7 @@ function renderAdminTab() {
         <button class="btn" id="adminPdfBtn">📄 PDF</button>
       </div>
     </div>
+    ${memoryCardHtml()}
     ${backupRestoreCardHtml()}
     ${deletedItemsCardHtml()}
     ${promoteCardHtml()}
@@ -525,6 +569,7 @@ function renderAdminTab() {
   });
 
   wireBackupRestoreHandlers();
+  wireMemoryCard();
   if (typeof wireReminderCard === "function") wireReminderCard(el);
   if (typeof wireBuzzCard === "function") wireBuzzCard(el);
   const bioClassBtn = document.getElementById("printClassBioBtn");
