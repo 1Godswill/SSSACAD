@@ -28,11 +28,16 @@ student) at the same time without overwriting each other.
   table (Position Per-Subject, Average, Grade, Remark), signature lines,
   and the marking key. The Annual view shows each subject's 1st/2nd/3rd
   Term totals instead of Test1/Test2/Exam.
+- **Analysis** — performance analysis for any Term or the Annual view: class snapshot, boys vs girls
+  (averages, pass rate, grade spread, top pupil), subject-by-subject gender gap, pupil ranking against the
+  class average, head-to-head comparison of any two pupils, and progress across terms. Export to Print/PDF or Excel
 - **Broadsheet** — whole-class summary sorted by rank, always prints A4
   landscape, automatically split into multiple pages when there are more
   than 6 subjects (each page repeats S/N + Student Name)
 - **Print Preview** — see exactly what will print before opening the OS
   print dialog, on both the Report Card and Broadsheet
+- **Admin > Performance** — the same analysis for the whole school: class comparison, boys vs girls, top pupils,
+  pupils needing support, subjects across classes, and recommendations; tap a class for its full analysis
 - **Admin tab** — class access codes, class announcements, sync,
   export (Preview / Excel / PDF), local Backup & Restore, and Deleted Items & Undo
 

@@ -1,5 +1,55 @@
 # Changelog
 
+## 3.15.0 — Class Backup for teachers
+
+- New **Class Backup** card on the class home screen (eighth card). Protected by the class access code like the other class tabs.
+- **Download:** saves one class (pupils, subjects, scores, attendance). The access code and other classes are never in the file.
+- **Restore scores:** only into the same class (class id must match), only the scores of one chosen term, only for pupils and subjects that exist now. Removed or promoted pupils are skipped; pupils, subjects and attendance are never changed.
+- **Fill empty boxes only** (default) never overwrites a score; **Replace** does. A preview shows how many scores will be filled, replaced, skipped.
+- **Undo Last Restore** puts back exactly what the last restore changed (kept on this device only).
+- The admin Backup & Restore on the Admin tab is unchanged.
+
+## 3.14.1 — Compare Two Pupils is Admin-only
+
+- Removed the **Compare Two Pupils** card from the class Analysis tab. It now appears only in **Admin > Performance** (when a single class is opened).
+
+## 3.14.0 — Performance in Admin, with recommendations
+
+- New **Performance** card in the Admin tab (second card, after Find a Student). Choose Term 1, 2, 3 or Annual, then **All classes** for a school overview or a single class for its full analysis.
+- **School overview:** snapshot, class comparison (ranked, with boys and girls per class), boys vs girls for the whole school, top 10 pupils, pupils needing support (under 50), and subjects combined across classes with the gender gap.
+- **Recommendations** (also added to each class's Analysis tab): pupils below or close to the pass mark, pupils whose results dropped or improved, weak subjects, boys/girls gaps (small groups are flagged instead of acted on), classes needing support, missing scores, and top performers. Each says why it appears.
+- Tap a class name in the overview to open that class's full analysis (ranking, compare two pupils, progress across terms); the Back button returns to the overview.
+- Print / PDF and Excel for the school overview and for any single class, both now including the recommendations.
+- Read-only: nothing is stored or changed. Admin PIN still protects the section.
+
+## 3.13.0 — Performance Analysis tab
+
+- New **Analysis** card on the class home screen (seventh card). Pick Term 1, 2, 3 or Annual.
+- **Snapshot:** pupils with scores, class average, highest and lowest average, pass rate (average 50+) and Grade A–B rate.
+- **Boys vs Girls:** average, highest, lowest, pass rate, Grade A–B rate, top pupil, and the grade spread (A to F) for each gender, with a plain-language summary. Small groups (under 5) are flagged so a few pupils are not over-read.
+- **Subject by subject:** class average, pass rate, boys' average, girls' average and the gap for every subject.
+- **Pupil ranking:** every pupil's average as a bar against the class average, coloured by gender.
+- **Compare two pupils:** pick any two pupils and see every subject side by side, who leads where, and the overall gap.
+- **Progress across terms:** boys, girls and class average for each term, plus each pupil's change from first to latest scored term.
+- Export the analysis to **Print / PDF** or **Excel**.
+- Read-only: it reads the same calculations as the Class Report and Report Card, so the numbers always agree. No stored data changes.
+
+## 3.12.15 — Easier-to-read instructions
+
+- Instructions, hints and notes now show in normal sentence case. Pupil names, section titles, buttons, field labels and table headings stay in capitals.
+
+## 3.12.14 — Roomier Students list on phones
+
+- Each pupil row now shows only the number, the full name and the drag handle, so long names have much more room (they wrap instead of being cut off).
+- Tap a name to open a small panel with the editable name, Gender and the Remove button. Tap again to close it.
+- A newly added pupil opens its panel automatically so the name can be typed straight away.
+
+## 3.12.13 — Flexible continuous-assessment split (Test 1 + Test 2 up to 40)
+
+- Test 1 and Test 2 may each be entered up to 40, but their combined total can never exceed 40. A school can use 20 + 20, or a single test out of 40.
+- Exam stays out of 60, so the overall total is still out of 100.
+- Report card "Max. marks obtainable" row now shows 40 across the two test columns.
+
 ## 3.12.12 — Navigation reliability + safer subject delete + promote warning
 
 - Card and Admin Back navigation now uses an internal stack so the Back bar and phone Back button always return exactly one level, even on WebViews/Capacitor where history.pushState can fail or be cleared.

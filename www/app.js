@@ -820,14 +820,23 @@ function addSubjectToClass(classId, subjectName) {
 // "Not taking" ticks and keeps an undo copy.
 
 /* ---------- Scores: scores[classId][term][subjectName][studentId] = {test1,test2,exam} ----------
-   Max obtainable per the report card header: Test1/Test2 = 20, Exam = 60. */
-const SCORE_MAX = { test1: 20, test2: 20, exam: 60 };
+   Max obtainable: Exam = 60. Test 1 and Test 2 together can never exceed 40 (CA_MAX), so a school
+   may split it 20 + 20, or use a single test worth up to 40. Each test alone may go up to 40. */
+const CA_MAX = 40;
+const SCORE_MAX = { test1: CA_MAX, test2: CA_MAX, exam: 60 };
 /* Entry checks. A number outside the allowed range is REFUSED ({ ok:false }), never quietly changed to
    the nearest allowed value. A blank box is fine: it clears the entry. */
-function checkScoreEntry(field, raw) {
+function checkScoreEntry(field, raw, otherTestValue) {
   if (raw === "" || raw == null) return { ok: true, value: undefined };
   const n = Number(raw);
-  const max = SCORE_MAX[field] || 0;
+  let max = SCORE_MAX[field] || 0;
+  // Test 1 + Test 2 combined must not exceed CA_MAX: the other test's score reduces what is left.
+  if (field === "test1" || field === "test2") {
+    const other = Number(otherTestValue);
+    if (otherTestValue !== undefined && otherTestValue !== null && otherTestValue !== "" && isFinite(other)) {
+      max = Math.min(max, CA_MAX - other);
+    }
+  }
   if (!isFinite(n) || n < 0 || n > max) return { ok: false };
   return { ok: true, value: Math.round(n) };
 }

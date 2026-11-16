@@ -447,6 +447,8 @@ const TAB_RENDERERS = {
   classreport: () => renderClassReport(),
   reportcard: () => renderReportCard(),
   broadsheet: () => renderBroadsheet(),
+  analysis: () => renderAnalysis(),
+  classbackup: () => renderClassBackup(),
   admintab: () => { if (typeof renderAdminTab === "function") renderAdminTab(); },
 };
 function renderAll() {
@@ -561,6 +563,7 @@ function guardClassLock(el, classId) {
 }
 
 /* ================= STUDENTS TAB ================= */
+let openStudentId = null;   // the pupil whose gender / Remove panel is open on the Students tab
 function renderStudents() {
   const el = document.getElementById("students");
   const classId = getCurrentClassId();
@@ -579,7 +582,7 @@ function renderStudents() {
     ${announcementHtml}
     <div class="card">
       <h2>Students — ${esc(cls ? cls.name : "")} (${students.length})</h2>
-      <p style="font-size:12px;color:var(--muted);margin:-4px 0 10px;">Drag ${iconSvg("grip")} to match your paper register's order — that order carries through to Register and Score Entry.</p>
+      <p style="font-size:12px;color:var(--muted);margin:-4px 0 10px;">Tap a name to edit it, set gender or remove. Drag ${iconSvg("grip")} to match your paper register's order — that order carries through to Register and Score Entry.</p>
       <div id="studentList"></div>
       <button class="btn" id="addStudentBtn">+ Add Student</button>
       <button class="btn secondary" id="printClassBioStudentsBtn">🖨 Print Class Bio</button>
@@ -606,17 +609,29 @@ function renderStudents() {
     list.innerHTML = `<div class="empty">No students yet in this class. Add your class list below.</div>`;
   } else {
     list.innerHTML = students.map((s, i) => {
+      const open = openStudentId === s.id;
       return `
-      <div class="row student-row" data-id="${esc(s.id)}" style="margin-bottom:8px;align-items:center;">
-        <span class="sn-badge" style="flex:0 0 auto;min-width:20px;text-align:right;color:var(--muted);font-size:12px;font-weight:600;">${i + 1}.</span>
-        <input type="text" value="${esc(s.name)}" data-id="${esc(s.id)}" data-field="name" class="student-input" placeholder="Name" style="flex:2;">
-        <select data-id="${esc(s.id)}" data-field="gender" class="student-input" style="flex:1;">
-          <option value="" ${!s.gender ? "selected" : ""}>—</option>
-          <option value="M" ${s.gender === "M" ? "selected" : ""}>M</option>
-          <option value="F" ${s.gender === "F" ? "selected" : ""}>F</option>
-        </select>
-        <button class="btn danger small" data-del="${esc(s.id)}">Remove</button>
-        <span class="drag-handle" title="Drag to reorder">${iconSvg("grip")}</span>
+      <div class="student-row" data-id="${esc(s.id)}" style="margin-bottom:8px;">
+        <div class="row" style="align-items:center;">
+          <span class="sn-badge" style="flex:0 0 auto;min-width:20px;text-align:right;color:var(--muted);font-size:12px;font-weight:600;">${i + 1}.</span>
+          <button type="button" class="stu-name-btn" data-toggle="${esc(s.id)}" aria-expanded="${open}" style="flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:6px;text-align:left;padding:9px 10px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font:inherit;font-size:14px;cursor:pointer;">
+            <span style="white-space:normal;word-break:break-word;${s.name ? "" : "color:var(--muted);"}">${s.name ? esc(s.name) : "Tap to enter name"}</span>
+            <span aria-hidden="true" style="flex:0 0 auto;color:var(--muted);font-size:11px;">${open ? "▲" : "▼"}</span>
+          </button>
+          <span class="drag-handle" title="Drag to reorder">${iconSvg("grip")}</span>
+        </div>
+        ${open ? `
+        <div class="stu-detail" style="margin:6px 0 0 26px;padding:8px;border:1px solid var(--border);border-radius:9px;background:var(--brand-light);">
+          <input type="text" value="${esc(s.name)}" data-id="${esc(s.id)}" data-field="name" class="student-input" placeholder="Name" style="margin-bottom:8px;">
+          <div class="row" style="align-items:center;">
+            <select data-id="${esc(s.id)}" data-field="gender" class="student-input" style="flex:1;">
+              <option value="" ${!s.gender ? "selected" : ""}>Gender —</option>
+              <option value="M" ${s.gender === "M" ? "selected" : ""}>Male (M)</option>
+              <option value="F" ${s.gender === "F" ? "selected" : ""}>Female (F)</option>
+            </select>
+            <button class="btn danger small" data-del="${esc(s.id)}">Remove</button>
+          </div>
+        </div>` : ""}
       </div>
     `;
     }).join("");
@@ -626,9 +641,17 @@ function renderStudents() {
   document.getElementById("addStudentBtn").addEventListener("click", () => {
     const s = loadStudents();
     const nextOrder = studentsInClass(classId).length;
-    s.push({ id: newId(), name: "", gender: "", classId: classId, order: nextOrder });
+    const created = { id: newId(), name: "", gender: "", classId: classId, order: nextOrder };
+    s.push(created);
+    openStudentId = created.id;   // open the new pupil's panel so the name can be typed straight away
     saveStudents(s);
     renderAll();
+  });
+  list.querySelectorAll("[data-toggle]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      openStudentId = openStudentId === btn.dataset.toggle ? null : btn.dataset.toggle;
+      renderAll();
+    });
   });
   list.querySelectorAll(".student-input").forEach((inp) => {
     inp.addEventListener("change", () => {
@@ -777,7 +800,10 @@ function renderScoreEntry() {
         const term = scoreEntryState.term, subj = scoreEntryState.subject, studentId = inp.dataset.student;
         const field = inp.dataset.field;
         const raw = inp.value;
-        let check = checkScoreEntry(field, raw);
+        const otherField = field === "test1" ? "test2" : field === "test2" ? "test1" : null;
+        const otherVal = otherField && scores[classId] && scores[classId][term] && scores[classId][term][subj] &&
+          scores[classId][term][subj][studentId] ? scores[classId][term][subj][studentId][otherField] : undefined;
+        let check = checkScoreEntry(field, raw, otherVal);
         const invalid = !check.ok;
         if (invalid) check = { ok: true, value: undefined };   // refused number: the box (and that entry) is left blank
         const clamped = check.value;
@@ -1321,7 +1347,7 @@ function renderReportCard() {
               ${isAnnual
                 ? `<tr class="rs-maxrow"><th></th><th>ANNUAL SUMMARY</th><th colspan="3">TERM TOTALS</th><th></th><th rowspan="2">POSITION<br>PER-SUBJECT</th><th rowspan="2">AVERAGE</th><th rowspan="2">GRADE<br>LETTER</th><th rowspan="2">REMARK</th></tr>
                    <tr><th>S/N</th><th>SUBJECT</th><th>1st Term</th><th>2nd Term</th><th>3rd Term</th><th>Total</th></tr>`
-                : `<tr class="rs-maxrow"><th></th><th>MAX. MARKS OBTAINABLE</th><th>20</th><th>20</th><th>60</th><th>100</th><th rowspan="2">POSITION<br>PER-SUBJECT</th><th rowspan="2">AVERAGE</th><th rowspan="2">GRADE<br>LETTER</th><th rowspan="2">REMARK</th></tr>
+                : `<tr class="rs-maxrow"><th></th><th>MAX. MARKS OBTAINABLE</th><th colspan="2" title="Test 1 + Test 2 combined">40</th><th>60</th><th>100</th><th rowspan="2">POSITION<br>PER-SUBJECT</th><th rowspan="2">AVERAGE</th><th rowspan="2">GRADE<br>LETTER</th><th rowspan="2">REMARK</th></tr>
                    <tr><th>S/N</th><th>SUBJECT</th><th>Test 1</th><th>Test 2</th><th>Exam</th><th>Total</th></tr>`}
             </thead>
             <tbody>${subjectRows}</tbody>

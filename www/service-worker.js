@@ -19,6 +19,8 @@ const APP_SHELL = [
   "./app.js",
   "./history.js",
   "./ui.js",
+  "./analysis.js",
+  "./classbackup.js",
   "./login.js",
   "./sync.js",
   "./admin.js",
